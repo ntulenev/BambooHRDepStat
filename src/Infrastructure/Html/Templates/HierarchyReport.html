@@ -172,6 +172,12 @@
       min-height: 360px;
     }
 
+    .chart-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 4px;
+    }
+
     .chart-empty {
       color: var(--muted);
       font-style: italic;
@@ -443,7 +449,9 @@
         <article class="chart-panel">
           <h3 class="chart-title">Team Grade Distribution</h3>
           <p class="chart-subtitle">Stacked view of grades per team.</p>
-          <div id="team-grade-chart" class="chart-frame"></div>
+          <div class="chart-scroll">
+            <div id="team-grade-chart" class="chart-frame"></div>
+          </div>
           <div id="team-grade-legend" class="legend-grid"></div>
         </article>
       </div>
@@ -485,11 +493,6 @@ __HIERARCHY_ROWS__
 __JOB_TITLE_ROWS__
             </tbody>
           </table>
-        </section>
-
-        <section class="panel">
-          <h2>Teams</h2>
-__TEAM_CARDS__
         </section>
       </div>
 
@@ -602,9 +605,9 @@ __TENURE_CARDS__
           return;
         }
 
-        const width = Math.max(780, items.length * 112);
-        const height = 360;
-        const margin = { top: 18, right: 18, bottom: 88, left: 46 };
+        const width = Math.max(820, items.length * 118);
+        const height = 400;
+        const margin = { top: 18, right: 18, bottom: 122, left: 46 };
         const plotWidth = width - margin.left - margin.right;
         const plotHeight = height - margin.top - margin.bottom;
         const maxValueRaw = Math.max(...items.map(item => item.total));
@@ -612,6 +615,40 @@ __TENURE_CARDS__
         const stepX = plotWidth / items.length;
         const barWidth = Math.min(52, stepX * 0.56);
         const ticks = 4;
+
+        const splitLabel = (value) => {
+          const cleaned = value.replace(/'s Team$/i, '').trim();
+          const words = cleaned.split(/\s+/).filter(Boolean);
+          const lines = [];
+          let current = '';
+
+          for (const word of words) {
+            const candidate = current ? `${current} ${word}` : word;
+            if (candidate.length <= 14) {
+              current = candidate;
+              continue;
+            }
+
+            if (current) {
+              lines.push(current);
+              current = word;
+            } else {
+              lines.push(word.slice(0, 14));
+              current = word.slice(14);
+            }
+          }
+
+          if (current) {
+            lines.push(current);
+          }
+
+          const normalized = lines.slice(0, 2);
+          if (lines.length > 2) {
+            normalized[1] = `${normalized[1].slice(0, 11)}...`;
+          }
+
+          return normalized;
+        };
 
         let svg = `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Team grade distribution stacked bar chart">`;
 
@@ -633,7 +670,14 @@ __TENURE_CARDS__
           });
 
           svg += `<text class="axis-label" x="${x + barWidth / 2}" y="${currentY - 10}" text-anchor="middle">${item.total}</text>`;
-          svg += `<text class="axis-label-small" transform="translate(${x + barWidth / 2} ${height - 24}) rotate(-42)" text-anchor="end">${item.label}</text>`;
+          const labelLines = splitLabel(item.label);
+          const labelY = margin.top + plotHeight + 66;
+          svg += `<text class="axis-label-small" x="${x + barWidth / 2}" y="${labelY}" text-anchor="middle">`;
+          labelLines.forEach((line, lineIndex) => {
+            const dy = lineIndex === 0 ? 0 : 14;
+            svg += `<tspan x="${x + barWidth / 2}" dy="${dy}">${line}</tspan>`;
+          });
+          svg += `</text>`;
         });
 
         svg += `</svg>`;
