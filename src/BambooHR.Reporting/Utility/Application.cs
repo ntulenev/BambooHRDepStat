@@ -10,6 +10,7 @@ namespace BambooHR.Reporting.Utility;
 public sealed class Application : IApplication
 {
     private readonly IHierarchyReportBuilder _hierarchyReportBuilder;
+    private readonly ILoadingNotifier _loadingNotifier;
     private readonly IReportWriter _reportWriter;
     private readonly BambooHrOptions _options;
 
@@ -18,14 +19,17 @@ public sealed class Application : IApplication
     /// </summary>
     public Application(
         IHierarchyReportBuilder hierarchyReportBuilder,
+        ILoadingNotifier loadingNotifier,
         IReportWriter reportWriter,
         BambooHrOptions options)
     {
         ArgumentNullException.ThrowIfNull(hierarchyReportBuilder);
+        ArgumentNullException.ThrowIfNull(loadingNotifier);
         ArgumentNullException.ThrowIfNull(reportWriter);
         ArgumentNullException.ThrowIfNull(options);
 
         _hierarchyReportBuilder = hierarchyReportBuilder;
+        _loadingNotifier = loadingNotifier;
         _reportWriter = reportWriter;
         _options = options;
     }
@@ -36,7 +40,12 @@ public sealed class Application : IApplication
         ct.ThrowIfCancellationRequested();
         _ = args;
 
-        var report = await _hierarchyReportBuilder.BuildAsync(_options.EmployeeId, ct)
+        var report = await _loadingNotifier.RunAsync(
+                "Connecting to BambooHR...",
+                async cancellationToken => await _hierarchyReportBuilder
+                    .BuildAsync(_options.EmployeeId, cancellationToken)
+                    .ConfigureAwait(false),
+                ct)
             .ConfigureAwait(false);
         _reportWriter.Write(report);
     }

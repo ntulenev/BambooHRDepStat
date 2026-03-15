@@ -11,6 +11,38 @@ namespace Logic;
 /// </summary>
 public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 {
+    private static readonly (string RequestKey, string DisplayName)[] PreferredLocationFields =
+    [
+        ("location", "Location"),
+        ("office", "Office"),
+        ("workLocation", "Work Location")
+    ];
+    private static readonly (string RequestKey, string DisplayName)[] PreferredCountryFields =
+    [
+        ("country", "Country"),
+        ("countryName", "Country"),
+        ("workCountry", "Work Country")
+    ];
+    private static readonly (string RequestKey, string DisplayName)[] PreferredCityFields =
+    [
+        ("city", "City"),
+        ("workCity", "Work City"),
+        ("officeCity", "Office City")
+    ];
+    private static readonly (string RequestKey, string DisplayName)[] PreferredBirthDateFields =
+    [
+        ("dateOfBirth", "Date of Birth"),
+        ("birthDate", "Birth Date"),
+        ("birthday", "Birthday"),
+        ("dob", "Date of Birth")
+    ];
+    private static readonly (string RequestKey, string DisplayName)[] PreferredHireDateFields =
+    [
+        ("hireDate", "Hire Date"),
+        ("startDate", "Start Date"),
+        ("dateHired", "Date Hired"),
+        ("employmentStartDate", "Employment Start Date")
+    ];
     private static readonly HierarchyRelationshipField[] PreferredManagerIdFields =
     [
         new("supervisorEId", "Supervisor EId", usesEmployeeId: true),
@@ -29,6 +61,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
     ];
 
     private readonly IBambooHrClient _bambooHrClient;
+    private readonly ILoadingNotifier _loadingNotifier;
     private readonly IWorkWeekProvider _workWeekProvider;
     private readonly TimeProvider _timeProvider;
 
@@ -37,14 +70,17 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
     /// </summary>
     public HierarchyReportBuilder(
         IBambooHrClient bambooHrClient,
+        ILoadingNotifier loadingNotifier,
         IWorkWeekProvider workWeekProvider,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(bambooHrClient);
+        ArgumentNullException.ThrowIfNull(loadingNotifier);
         ArgumentNullException.ThrowIfNull(workWeekProvider);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         _bambooHrClient = bambooHrClient;
+        _loadingNotifier = loadingNotifier;
         _workWeekProvider = workWeekProvider;
         _timeProvider = timeProvider;
     }
@@ -61,11 +97,29 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 
         ct.ThrowIfCancellationRequested();
 
+        _loadingNotifier.SetStatus("Loading work week and BambooHR field metadata...");
         var workWeek = _workWeekProvider.GetWorkWeek(_timeProvider.GetLocalNow());
+        var fields = await _bambooHrClient.GetFieldsAsync(ct).ConfigureAwait(false);
+        _loadingNotifier.SetStatus("Resolving hierarchy relationship field...");
         var relationshipField = await ResolveRelationshipFieldAsync(rootEmployeeId, ct)
             .ConfigureAwait(false);
+        var locationField = FindField(fields, PreferredLocationFields);
+        var countryField = FindField(fields, PreferredCountryFields);
+        var cityField = FindField(fields, PreferredCityFields);
+        var birthDateField = FindField(fields, PreferredBirthDateFields);
+        var hireDateField = FindField(fields, PreferredHireDateFields);
+        _loadingNotifier.SetStatus("Loading employee directory...");
         var employees = await _bambooHrClient.GetEmployeesAsync(ct).ConfigureAwait(false);
-        var profiles = await LoadProfilesAsync(employees, relationshipField, ct)
+        _loadingNotifier.SetStatus($"Loading employee profiles (0/{employees.Count})...");
+        var profiles = await LoadProfilesAsync(
+                employees,
+                relationshipField,
+                locationField,
+                countryField,
+                cityField,
+                birthDateField,
+                hireDateField,
+                ct)
             .ConfigureAwait(false);
         var profilesByEmployeeId = profiles.ToDictionary(
             profile => profile.EmployeeId,
@@ -81,6 +135,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             ? BuildEmployeeIdHierarchy(profiles)
             : BuildNameHierarchy(profiles);
 
+        _loadingNotifier.SetStatus("Loading who's out for the current work week...");
         var whoIsOut = await _bambooHrClient.GetWhosOutAsync(
                 workWeek.Start,
                 workWeek.End,
@@ -99,6 +154,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                 ]);
 
         List<HierarchyReportRow> rows = [];
+        _loadingNotifier.SetStatus("Building hierarchy report...");
         FlattenHierarchy(
             rootEmployeeId,
             level: 0,
@@ -106,12 +162,163 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             childrenByManager,
             employeeEntries,
             rows);
+        var teams = BuildTeams(rows, profilesByEmployeeId, childrenByManager);
+        var includedProfiles = rows
+            .Select(row => profilesByEmployeeId[row.EmployeeId])
+            .ToArray();
+        _loadingNotifier.SetStatus("Calculating distributions and summaries...");
+        var locationCounts = BuildLocationCounts(includedProfiles);
+        var countryCityCounts = BuildCountryCityCounts(includedProfiles);
+        var ageCounts = BuildAgeCounts(includedProfiles, workWeek.Start);
+        var tenureCounts = BuildTenureCounts(includedProfiles, workWeek.Start);
 
         return new HierarchyReport(
             workWeek,
             rootEmployee.DisplayName,
             relationshipField,
-            rows);
+            rows,
+            teams,
+            locationCounts,
+            countryCityCounts,
+            ageCounts,
+            tenureCounts);
+    }
+
+    private static List<HierarchyTeam> BuildTeams(
+        IReadOnlyList<HierarchyReportRow> rows,
+        Dictionary<int, EmployeeProfile> profilesByEmployeeId,
+        Dictionary<int, List<int>> childrenByManager)
+    {
+        var includedEmployeeIds = rows
+            .Select(row => row.EmployeeId)
+            .ToHashSet();
+        List<HierarchyTeam> teams = [];
+
+        foreach (var row in rows)
+        {
+            if (!childrenByManager.TryGetValue(row.EmployeeId, out var directReports))
+            {
+                continue;
+            }
+
+            var leafDirectReports = directReports
+                .Distinct()
+                .Where(id => includedEmployeeIds.Contains(id))
+                .Where(id => !childrenByManager.ContainsKey(id))
+                .OrderBy(
+                    id => profilesByEmployeeId[id].DisplayName,
+                    StringComparer.OrdinalIgnoreCase)
+                .ThenBy(id => id)
+                .Select(id => profilesByEmployeeId[id].DisplayName)
+                .ToArray();
+
+            if (leafDirectReports.Length == 0)
+            {
+                continue;
+            }
+
+            teams.Add(new HierarchyTeam(
+                row.EmployeeId,
+                row.DisplayName,
+                leafDirectReports,
+                BuildGradeCounts(
+                    row.EmployeeId,
+                    directReports,
+                    includedEmployeeIds,
+                    childrenByManager,
+                    profilesByEmployeeId)));
+        }
+
+        return teams;
+    }
+
+    private static Dictionary<string, int> BuildGradeCounts(
+        int managerEmployeeId,
+        IEnumerable<int> directReports,
+        HashSet<int> includedEmployeeIds,
+        Dictionary<int, List<int>> childrenByManager,
+        Dictionary<int, EmployeeProfile> profilesByEmployeeId)
+    {
+        var peopleIds = directReports
+            .Distinct()
+            .Where(id => includedEmployeeIds.Contains(id))
+            .Where(id => !childrenByManager.ContainsKey(id))
+            .Append(managerEmployeeId);
+
+        return peopleIds
+            .Select(id => ResolveGradeLabel(profilesByEmployeeId[id].JobTitle))
+            .GroupBy(grade => grade)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Count(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, int> BuildLocationCounts(
+        EmployeeProfile[] profiles)
+    {
+        return profiles
+            .Select(ResolveCountryLabel)
+            .GroupBy(location => location, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.First(),
+                group => group.Count(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, IReadOnlyDictionary<string, int>> BuildCountryCityCounts(
+        EmployeeProfile[] profiles)
+    {
+        return profiles
+            .Select(profile => (Country: ResolveCountryLabel(profile), City: ResolveCityLabel(profile)))
+            .Where(item => !string.IsNullOrWhiteSpace(item.City))
+            .GroupBy(item => item.Country, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyDictionary<string, int>)group
+                    .GroupBy(item => item.City!, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(cityGroup => cityGroup.Count())
+                    .ThenBy(cityGroup => cityGroup.Key, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(
+                        cityGroup => cityGroup.First().City!,
+                        cityGroup => cityGroup.Count(),
+                        StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, int> BuildAgeCounts(
+        EmployeeProfile[] profiles,
+        DateOnly referenceDate)
+    {
+        return profiles
+            .Select(profile => ClassifyAge(profile.DateOfBirth, referenceDate))
+            .GroupBy(bucket => bucket, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => GetAgeBucketOrder(group.Key))
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Count(),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, int> BuildTenureCounts(
+        EmployeeProfile[] profiles,
+        DateOnly referenceDate)
+    {
+        return profiles
+            .Select(profile => ClassifyTenure(profile.HireDate, referenceDate))
+            .GroupBy(bucket => bucket, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => GetTenureBucketOrder(group.Key))
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Count(),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     private static Dictionary<int, List<int>> BuildEmployeeIdHierarchy(
@@ -247,6 +454,9 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             profile.DisplayName,
             profile.Department,
             profile.JobTitle,
+            profile.Location,
+            profile.DateOfBirth,
+            profile.HireDate,
             managerName,
             [
                 .. entries
@@ -332,17 +542,47 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
     private async Task<IReadOnlyList<EmployeeProfile>> LoadProfilesAsync(
         IReadOnlyList<BasicEmployee> employees,
         HierarchyRelationshipField relationshipField,
+        BambooHrField? locationField,
+        BambooHrField? countryField,
+        BambooHrField? cityField,
+        BambooHrField? birthDateField,
+        BambooHrField? hireDateField,
         CancellationToken ct)
     {
-        var requestKeys = new[]
+        var requestKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "department",
             "jobTitle",
             "workEmail",
             relationshipField.RequestKey
         };
+        if (locationField is not null)
+        {
+            _ = requestKeys.Add(locationField.RequestKey);
+        }
+
+        if (countryField is not null)
+        {
+            _ = requestKeys.Add(countryField.RequestKey);
+        }
+
+        if (cityField is not null)
+        {
+            _ = requestKeys.Add(cityField.RequestKey);
+        }
+
+        if (birthDateField is not null)
+        {
+            _ = requestKeys.Add(birthDateField.RequestKey);
+        }
+
+        if (hireDateField is not null)
+        {
+            _ = requestKeys.Add(hireDateField.RequestKey);
+        }
 
         var profiles = new ConcurrentBag<EmployeeProfile>();
+        var loadedProfiles = 0;
         var options = new ParallelOptions
         {
             CancellationToken = ct,
@@ -363,6 +603,11 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                     _ = fieldValues.Values.TryGetValue("department", out var department);
                     _ = fieldValues.Values.TryGetValue("jobTitle", out var jobTitle);
                     _ = fieldValues.Values.TryGetValue("workEmail", out var workEmail);
+                    _ = TryGetFieldValue(fieldValues, locationField, out var location);
+                    _ = TryGetFieldValue(fieldValues, countryField, out var country);
+                    _ = TryGetFieldValue(fieldValues, cityField, out var city);
+                    _ = TryGetFieldValue(fieldValues, birthDateField, out var birthDateValue);
+                    _ = TryGetFieldValue(fieldValues, hireDateField, out var hireDateValue);
                     _ = fieldValues.Values.TryGetValue(
                         relationshipField.RequestKey,
                         out var managerLookupValue);
@@ -375,8 +620,19 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                         employee.PreferredName,
                         department,
                         jobTitle ?? employee.JobTitle,
+                        location,
+                        country,
+                        city,
+                        ParseDate(birthDateValue),
+                        ParseDate(hireDateValue),
                         workEmail,
                         managerLookupValue));
+
+                    var completed = Interlocked.Increment(ref loadedProfiles);
+                    _loadingNotifier.SetProgress(
+                        $"Loading employee profiles ({completed}/{employees.Count})...",
+                        completed,
+                        employees.Count);
                 })
             .ConfigureAwait(false);
 
@@ -424,5 +680,289 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         }
 
         return null;
+    }
+
+    private static BambooHrField? FindField(
+        IEnumerable<BambooHrField> fields,
+        (string RequestKey, string DisplayName)[] candidates)
+    {
+        var fieldList = fields.ToArray();
+
+        foreach (var (requestKey, _) in candidates)
+        {
+            var exact = fieldList.FirstOrDefault(field =>
+                string.Equals(
+                    Normalize(field.RequestKey),
+                    Normalize(requestKey),
+                    StringComparison.Ordinal));
+            if (exact is not null)
+            {
+                return exact;
+            }
+        }
+
+        foreach (var (requestKey, displayName) in candidates)
+        {
+            var partial = fieldList.FirstOrDefault(field =>
+                Normalize(field.RequestKey).Contains(
+                    Normalize(requestKey),
+                    StringComparison.Ordinal)
+                || Normalize(field.Name).Contains(
+                    Normalize(displayName),
+                    StringComparison.Ordinal));
+            if (partial is not null)
+            {
+                return partial;
+            }
+        }
+
+        return null;
+    }
+
+    private static string ResolveGradeLabel(string? jobTitle)
+    {
+        if (string.IsNullOrWhiteSpace(jobTitle))
+        {
+            return "Unspecified";
+        }
+
+        if (jobTitle.Contains("Tech Lead", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Tech Lead";
+        }
+
+        if (jobTitle.Contains("Team Lead", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Team Lead";
+        }
+
+        if (jobTitle.Contains("Senior", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Senior";
+        }
+
+        if (jobTitle.Contains("Middle", StringComparison.OrdinalIgnoreCase)
+            || jobTitle.Contains("Mid", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Middle";
+        }
+
+        if (jobTitle.Contains("Junior", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Junior";
+        }
+
+        if (jobTitle.Contains("Lead", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Lead";
+        }
+
+        if (jobTitle.Contains("Manager", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Manager";
+        }
+
+        if (jobTitle.Contains("Director", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Director";
+        }
+
+        if (jobTitle.Contains("Head", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Head";
+        }
+
+        return jobTitle.Trim();
+    }
+
+    private static string ClassifyAge(DateOnly? dateOfBirth, DateOnly referenceDate)
+    {
+        if (dateOfBirth is null)
+        {
+            return "Unknown";
+        }
+
+        var age = GetFullYears(dateOfBirth.Value, referenceDate);
+        if (age < 25)
+        {
+            return "<25";
+        }
+
+        if (age < 35)
+        {
+            return "25-34";
+        }
+
+        if (age < 45)
+        {
+            return "35-44";
+        }
+
+        if (age < 55)
+        {
+            return "45-54";
+        }
+
+        return "55+";
+    }
+
+    private static string ClassifyTenure(DateOnly? hireDate, DateOnly referenceDate)
+    {
+        if (hireDate is null)
+        {
+            return "Unknown";
+        }
+
+        var tenure = GetFullYears(hireDate.Value, referenceDate);
+        if (tenure < 1)
+        {
+            return "<1 year";
+        }
+
+        if (tenure < 3)
+        {
+            return "1-2 years";
+        }
+
+        if (tenure < 6)
+        {
+            return "3-5 years";
+        }
+
+        if (tenure < 11)
+        {
+            return "6-10 years";
+        }
+
+        return "10+ years";
+    }
+
+    private static int GetFullYears(DateOnly startDate, DateOnly endDate)
+    {
+        var years = endDate.Year - startDate.Year;
+        if (endDate < startDate.AddYears(years))
+        {
+            years--;
+        }
+
+        return years;
+    }
+
+    private static int GetAgeBucketOrder(string bucket)
+    {
+        return bucket switch
+        {
+            "<25" => 0,
+            "25-34" => 1,
+            "35-44" => 2,
+            "45-54" => 3,
+            "55+" => 4,
+            _ => 5
+        };
+    }
+
+    private static int GetTenureBucketOrder(string bucket)
+    {
+        return bucket switch
+        {
+            "<1 year" => 0,
+            "1-2 years" => 1,
+            "3-5 years" => 2,
+            "6-10 years" => 3,
+            "10+ years" => 4,
+            _ => 5
+        };
+    }
+
+    private static bool TryGetFieldValue(
+        EmployeeFieldValues fieldValues,
+        BambooHrField? field,
+        out string? value)
+    {
+        value = null;
+        return field is not null
+            && fieldValues.Values.TryGetValue(field.RequestKey, out value);
+    }
+
+    private static DateOnly? ParseDate(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (DateOnly.TryParse(
+                value,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var date))
+        {
+            return date;
+        }
+
+        if (DateTime.TryParse(
+                value,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeLocal,
+                out var dateTime))
+        {
+            return DateOnly.FromDateTime(dateTime);
+        }
+
+        return null;
+    }
+
+    private static string ResolveCountryLabel(EmployeeProfile profile)
+    {
+        if (!string.IsNullOrWhiteSpace(profile.Country))
+        {
+            return profile.Country;
+        }
+
+        if (TryParseLocation(profile.Location, out _, out var country))
+        {
+            return country!;
+        }
+
+        return string.IsNullOrWhiteSpace(profile.Location)
+            ? "Unknown"
+            : profile.Location!;
+    }
+
+    private static string? ResolveCityLabel(EmployeeProfile profile)
+    {
+        if (!string.IsNullOrWhiteSpace(profile.City))
+        {
+            return profile.City;
+        }
+
+        return TryParseLocation(profile.Location, out var city, out _)
+            ? city
+            : null;
+    }
+
+    private static bool TryParseLocation(
+        string? location,
+        out string? city,
+        out string? country)
+    {
+        city = null;
+        country = null;
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            return false;
+        }
+
+        var parts = location
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        city = parts[0];
+        country = parts[^1];
+        return !string.IsNullOrWhiteSpace(city)
+            && !string.IsNullOrWhiteSpace(country);
     }
 }

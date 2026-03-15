@@ -11,7 +11,12 @@ public sealed class HierarchyReportBuilderTests
     {
         var client = new FakeBambooHrClient(
             [
-                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text")
+                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text"),
+                new BambooHrField("location", "Location", "location", "text"),
+                new BambooHrField("country", "Country", "country", "text"),
+                new BambooHrField("city", "City", "city", "text"),
+                new BambooHrField("dateOfBirth", "Date of Birth", "dateOfBirth", "date"),
+                new BambooHrField("hireDate", "Hire Date", "hireDate", "date")
             ],
             [
                 new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
@@ -25,25 +30,45 @@ public sealed class HierarchyReportBuilderTests
                 [1] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["department"] = "Leadership",
-                    ["jobTitle"] = "Director"
+                    ["jobTitle"] = "Director",
+                    ["location"] = "Berlin, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Berlin",
+                    ["dateOfBirth"] = "1980-01-10",
+                    ["hireDate"] = "2012-02-01"
                 },
                 [2] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["department"] = "Engineering",
                     ["jobTitle"] = "Manager",
-                    ["reportsTo"] = "Alice Smith"
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Munich, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Munich",
+                    ["dateOfBirth"] = "1990-03-12",
+                    ["hireDate"] = "2020-01-15"
                 },
                 [3] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["department"] = "Engineering",
                     ["jobTitle"] = "Engineer",
-                    ["reportsTo"] = "Bob Jones"
+                    ["reportsTo"] = "Bob Jones",
+                    ["location"] = "London, United Kingdom",
+                    ["country"] = "United Kingdom",
+                    ["city"] = "London",
+                    ["dateOfBirth"] = "1998-06-01",
+                    ["hireDate"] = "2024-06-01"
                 },
                 [4] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["department"] = "Operations",
                     ["jobTitle"] = "Analyst",
-                    ["reportsTo"] = "Alice Smith"
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Berlin, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Berlin",
+                    ["dateOfBirth"] = "1988-09-20",
+                    ["hireDate"] = "2018-03-01"
                 },
                 [5] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -71,6 +96,7 @@ public sealed class HierarchyReportBuilderTests
 
         var builder = new HierarchyReportBuilder(
             client,
+            new NoOpLoadingNotifier(),
             new StubWorkWeekProvider(new WorkWeek(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
@@ -83,10 +109,174 @@ public sealed class HierarchyReportBuilderTests
 
         Assert.Equal(expectedNames, report.Rows.Select(row => row.DisplayName).ToArray());
         Assert.Equal(expectedLevels, report.Rows.Select(row => row.Level).ToArray());
-        _ = Assert.Single(report.Rows[0].UnavailabilityEntries);
-        Assert.Equal(2, report.Rows[1].UnavailabilityEntries.Count);
+        Assert.Empty(report.Rows[0].UnavailabilityEntries);
+        _ = Assert.Single(report.Rows[1].UnavailabilityEntries);
         Assert.Equal("Alice Smith", report.RootEmployeeName);
         Assert.False(report.RelationshipField.UsesEmployeeId);
+        Assert.Equal(3, report.LocationCounts["Germany"]);
+        Assert.Equal(1, report.LocationCounts["United Kingdom"]);
+        Assert.Equal(2, report.CountryCityCounts["Germany"]["Berlin"]);
+        Assert.Equal(1, report.CountryCityCounts["Germany"]["Munich"]);
+        Assert.Equal(1, report.CountryCityCounts["United Kingdom"]["London"]);
+        Assert.Equal(1, report.AgeCounts["25-34"]);
+        Assert.Equal(2, report.AgeCounts["35-44"]);
+        Assert.Equal(1, report.AgeCounts["45-54"]);
+        Assert.Equal(1, report.TenureCounts["1-2 years"]);
+        Assert.Equal(2, report.TenureCounts["6-10 years"]);
+        Assert.Equal(1, report.TenureCounts["10+ years"]);
+        Assert.Collection(
+            report.Teams,
+            team =>
+            {
+                Assert.Equal("Alice Smith", team.ManagerDisplayName);
+                Assert.Equal(["Diana White"], team.MemberDisplayNames);
+                Assert.Equal(2, team.PeopleCount);
+                Assert.Equal(1, team.GradeCounts["Analyst"]);
+                Assert.Equal(1, team.GradeCounts["Director"]);
+            },
+            team =>
+            {
+                Assert.Equal("Bob Jones", team.ManagerDisplayName);
+                Assert.Equal(["Carol Brown"], team.MemberDisplayNames);
+                Assert.Equal(2, team.PeopleCount);
+                Assert.Equal(1, team.GradeCounts["Engineer"]);
+                Assert.Equal(1, team.GradeCounts["Manager"]);
+            });
+    }
+
+    [Fact]
+    public async Task BuildAsyncCreatesTeamsFromLeafDirectReportsOnly()
+    {
+        var client = new FakeBambooHrClient(
+            [
+                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text"),
+                new BambooHrField("location", "Location", "location", "text"),
+                new BambooHrField("country", "Country", "country", "text"),
+                new BambooHrField("city", "City", "city", "text"),
+                new BambooHrField("dateOfBirth", "Date of Birth", "dateOfBirth", "date"),
+                new BambooHrField("hireDate", "Hire Date", "hireDate", "date")
+            ],
+            [
+                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(2, "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
+                new BasicEmployee(3, "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
+                new BasicEmployee(4, "Diana White", "Diana", "White", "Diana", "Engineer", "Active"),
+                new BasicEmployee(5, "Evan Black", "Evan", "Black", "Evan", "Engineer", "Active"),
+                new BasicEmployee(6, "Fiona Gray", "Fiona", "Gray", "Fiona", "Engineer", "Active")
+            ],
+            new Dictionary<int, IReadOnlyDictionary<string, string?>>
+            {
+                [1] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Leadership",
+                    ["jobTitle"] = "Director",
+                    ["location"] = "Berlin, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Berlin",
+                    ["dateOfBirth"] = "1981-05-11",
+                    ["hireDate"] = "2013-01-01"
+                },
+                [2] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Manager",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Munich, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Munich",
+                    ["dateOfBirth"] = "1989-10-01",
+                    ["hireDate"] = "2022-07-01"
+                },
+                [3] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "London, United Kingdom",
+                    ["country"] = "United Kingdom",
+                    ["city"] = "London",
+                    ["dateOfBirth"] = "2001-10-01",
+                    ["hireDate"] = "2025-01-10"
+                },
+                [4] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Prague, Czechia",
+                    ["country"] = "Czechia",
+                    ["city"] = "Prague",
+                    ["dateOfBirth"] = "1997-12-12",
+                    ["hireDate"] = "2021-05-10"
+                },
+                [5] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Bob Jones",
+                    ["location"] = "Berlin, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Berlin",
+                    ["dateOfBirth"] = "1994-03-08",
+                    ["hireDate"] = "2019-03-08"
+                },
+                [6] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Bob Jones",
+                    ["location"] = "Hamburg, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Hamburg",
+                    ["dateOfBirth"] = "1985-08-08",
+                    ["hireDate"] = "2010-08-08"
+                }
+            },
+            []);
+
+        var builder = new HierarchyReportBuilder(
+            client,
+            new NoOpLoadingNotifier(),
+            new StubWorkWeekProvider(new WorkWeek(
+                new DateOnly(2026, 3, 16),
+                new DateOnly(2026, 3, 20))),
+            new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
+
+        var report = await builder.BuildAsync(1, CancellationToken.None);
+
+        Assert.Equal(4, report.LocationCounts["Germany"]);
+        Assert.Equal(1, report.LocationCounts["United Kingdom"]);
+        Assert.Equal(1, report.LocationCounts["Czechia"]);
+        Assert.Equal(2, report.CountryCityCounts["Germany"]["Berlin"]);
+        Assert.Equal(1, report.CountryCityCounts["Germany"]["Munich"]);
+        Assert.Equal(1, report.CountryCityCounts["Germany"]["Hamburg"]);
+        Assert.Equal(1, report.CountryCityCounts["United Kingdom"]["London"]);
+        Assert.Equal(1, report.CountryCityCounts["Czechia"]["Prague"]);
+        Assert.Equal(1, report.AgeCounts["<25"]);
+        Assert.Equal(2, report.AgeCounts["25-34"]);
+        Assert.Equal(3, report.AgeCounts["35-44"]);
+        Assert.Equal(1, report.TenureCounts["1-2 years"]);
+        Assert.Equal(2, report.TenureCounts["3-5 years"]);
+        Assert.Equal(1, report.TenureCounts["6-10 years"]);
+        Assert.Equal(2, report.TenureCounts["10+ years"]);
+        Assert.Collection(
+            report.Teams,
+            team =>
+            {
+                Assert.Equal("Alice Smith", team.ManagerDisplayName);
+                Assert.Equal(["Carol Brown", "Diana White"], team.MemberDisplayNames);
+                Assert.Equal(3, team.PeopleCount);
+                Assert.Equal(1, team.GradeCounts["Director"]);
+                Assert.Equal(2, team.GradeCounts["Engineer"]);
+            },
+            team =>
+            {
+                Assert.Equal("Bob Jones", team.ManagerDisplayName);
+                Assert.Equal(["Evan Black", "Fiona Gray"], team.MemberDisplayNames);
+                Assert.Equal(3, team.PeopleCount);
+                Assert.Equal(2, team.GradeCounts["Engineer"]);
+                Assert.Equal(1, team.GradeCounts["Manager"]);
+            });
     }
 
     private sealed class FakeBambooHrClient : IBambooHrClient
@@ -155,6 +345,30 @@ public sealed class HierarchyReportBuilderTests
         {
             _ = currentDate;
             return _workWeek;
+        }
+    }
+
+    private sealed class NoOpLoadingNotifier : ILoadingNotifier
+    {
+        public Task<T> RunAsync<T>(
+            string description,
+            Func<CancellationToken, Task<T>> action,
+            CancellationToken ct)
+        {
+            _ = description;
+            return action(ct);
+        }
+
+        public void SetProgress(string description, int completed, int total)
+        {
+            _ = description;
+            _ = completed;
+            _ = total;
+        }
+
+        public void SetStatus(string description)
+        {
+            _ = description;
         }
     }
 

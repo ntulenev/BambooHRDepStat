@@ -14,6 +14,9 @@ public sealed class HierarchyReportRow
         string displayName,
         string? department,
         string? jobTitle,
+        string? location,
+        DateOnly? dateOfBirth,
+        DateOnly? employmentStartDate,
         string? managerName,
         IReadOnlyList<TimeOffEntry> unavailabilityEntries)
     {
@@ -25,6 +28,9 @@ public sealed class HierarchyReportRow
         DisplayName = displayName;
         Department = string.IsNullOrWhiteSpace(department) ? null : department;
         JobTitle = string.IsNullOrWhiteSpace(jobTitle) ? null : jobTitle;
+        Location = string.IsNullOrWhiteSpace(location) ? null : location;
+        DateOfBirth = dateOfBirth;
+        EmploymentStartDate = employmentStartDate;
         ManagerName = string.IsNullOrWhiteSpace(managerName) ? null : managerName;
         UnavailabilityEntries = unavailabilityEntries;
     }
@@ -53,6 +59,21 @@ public sealed class HierarchyReportRow
     /// Gets job title.
     /// </summary>
     public string? JobTitle { get; }
+
+    /// <summary>
+    /// Gets location.
+    /// </summary>
+    public string? Location { get; }
+
+    /// <summary>
+    /// Gets date of birth.
+    /// </summary>
+    public DateOnly? DateOfBirth { get; }
+
+    /// <summary>
+    /// Gets employment start date.
+    /// </summary>
+    public DateOnly? EmploymentStartDate { get; }
 
     /// <summary>
     /// Gets manager name.

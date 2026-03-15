@@ -16,6 +16,11 @@ public sealed class EmployeeProfile
         string preferredName,
         string? department,
         string? jobTitle,
+        string? location,
+        string? country,
+        string? city,
+        DateOnly? dateOfBirth,
+        DateOnly? hireDate,
         string? workEmail,
         string? managerLookupValue)
     {
@@ -31,6 +36,11 @@ public sealed class EmployeeProfile
         PreferredName = preferredName;
         Department = string.IsNullOrWhiteSpace(department) ? null : department;
         JobTitle = string.IsNullOrWhiteSpace(jobTitle) ? null : jobTitle;
+        Location = string.IsNullOrWhiteSpace(location) ? null : location;
+        Country = string.IsNullOrWhiteSpace(country) ? null : country;
+        City = string.IsNullOrWhiteSpace(city) ? null : city;
+        DateOfBirth = dateOfBirth;
+        HireDate = hireDate;
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
         ManagerLookupValue = string.IsNullOrWhiteSpace(managerLookupValue)
             ? null
@@ -71,6 +81,31 @@ public sealed class EmployeeProfile
     /// Gets job title.
     /// </summary>
     public string? JobTitle { get; }
+
+    /// <summary>
+    /// Gets location.
+    /// </summary>
+    public string? Location { get; }
+
+    /// <summary>
+    /// Gets country.
+    /// </summary>
+    public string? Country { get; }
+
+    /// <summary>
+    /// Gets city.
+    /// </summary>
+    public string? City { get; }
+
+    /// <summary>
+    /// Gets date of birth.
+    /// </summary>
+    public DateOnly? DateOfBirth { get; }
+
+    /// <summary>
+    /// Gets hire date.
+    /// </summary>
+    public DateOnly? HireDate { get; }
 
     /// <summary>
     /// Gets work email.

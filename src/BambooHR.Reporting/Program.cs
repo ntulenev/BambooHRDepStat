@@ -28,6 +28,7 @@ var builder = Host.CreateDefaultBuilder(args)
         _ = services.AddSingleton(options);
         _ = services.AddSingleton(TimeProvider.System);
         _ = services.AddSingleton<IApplication, Application>();
+        _ = services.AddSingleton<ILoadingNotifier, ConsoleLoadingNotifier>();
         _ = services.AddSingleton<IWorkWeekProvider, WorkWeekProvider>();
         _ = services.AddSingleton<IHierarchyReportBuilder, HierarchyReportBuilder>();
         _ = services.AddSingleton<IReportWriter, ConsoleReportWriter>();
