@@ -97,8 +97,9 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 
         ct.ThrowIfCancellationRequested();
 
+        var generatedAt = _timeProvider.GetLocalNow();
         _loadingNotifier.SetStatus("Loading work week and BambooHR field metadata...");
-        var workWeek = _workWeekProvider.GetWorkWeek(_timeProvider.GetLocalNow());
+        var workWeek = _workWeekProvider.GetWorkWeek(generatedAt);
         var fields = await _bambooHrClient.GetFieldsAsync(ct).ConfigureAwait(false);
         _loadingNotifier.SetStatus("Resolving hierarchy relationship field...");
         var relationshipField = await ResolveRelationshipFieldAsync(rootEmployeeId, ct)
@@ -173,6 +174,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         var tenureCounts = BuildTenureCounts(includedProfiles, workWeek.Start);
 
         return new HierarchyReport(
+            generatedAt,
             workWeek,
             rootEmployee.DisplayName,
             relationshipField,

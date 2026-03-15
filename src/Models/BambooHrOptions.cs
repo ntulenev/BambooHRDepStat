@@ -26,6 +26,16 @@ public sealed class BambooHrOptions
     public int EmployeeId { get; set; }
 
     /// <summary>
+    /// Gets or sets HTML report output options.
+    /// </summary>
+    public HtmlReportOptions Html { get; set; } = new();
+
+    /// <summary>
+    /// Gets or sets PDF report output options.
+    /// </summary>
+    public PdfReportOptions Pdf { get; set; } = new();
+
+    /// <summary>
     /// Validates configuration values.
     /// </summary>
     public void Validate()

@@ -109,6 +109,9 @@ public sealed class HierarchyReportBuilderTests
 
         Assert.Equal(expectedNames, report.Rows.Select(row => row.DisplayName).ToArray());
         Assert.Equal(expectedLevels, report.Rows.Select(row => row.Level).ToArray());
+        Assert.Equal(
+            new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero),
+            report.GeneratedAt);
         Assert.Empty(report.Rows[0].UnavailabilityEntries);
         _ = Assert.Single(report.Rows[1].UnavailabilityEntries);
         Assert.Equal("Alice Smith", report.RootEmployeeName);

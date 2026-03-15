@@ -9,9 +9,9 @@ namespace Infrastructure;
 /// <summary>
 /// Writes report using Spectre.Console tree rendering.
 /// </summary>
-public sealed class ConsoleReportWriter : IReportWriter
+public sealed class ConsoleReportWriter : IConsoleReportRenderer
 {
-    private static readonly Color[] TeamPalette =
+    internal static readonly Color[] TeamPalette =
     [
         Color.Green,
         Color.Blue,
@@ -23,12 +23,14 @@ public sealed class ConsoleReportWriter : IReportWriter
     ];
 
     /// <inheritdoc/>
-    public void Write(HierarchyReport report)
+    public void Render(HierarchyReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
 
         AnsiConsole.MarkupLine(
             $"[bold]BambooHR hierarchy report[/] for [green]{Escape(report.RootEmployeeName)}[/]");
+        AnsiConsole.MarkupLine(
+            $"Generated: [grey]{report.GeneratedAt:yyyy-MM-dd HH:mm:ss zzz}[/]");
         AnsiConsole.MarkupLine(
             $"Work week: [yellow]{report.WorkWeek.Start:yyyy-MM-dd}[/] to [yellow]{report.WorkWeek.End:yyyy-MM-dd}[/]");
         var relationshipMode = report.RelationshipField.UsesEmployeeId
@@ -334,8 +336,7 @@ public sealed class ConsoleReportWriter : IReportWriter
 
     private static string FormatDate(DateOnly? date)
     {
-        return date?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
-            ?? "-";
+        return ReportPresentationFormatter.FormatDate(date);
     }
 
     private static string Escape(string value) => Markup.Escape(value);

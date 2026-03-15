@@ -9,6 +9,7 @@ public sealed class HierarchyReport
     /// Creates hierarchy report.
     /// </summary>
     public HierarchyReport(
+        DateTimeOffset generatedAt,
         WorkWeek workWeek,
         string rootEmployeeName,
         HierarchyRelationshipField relationshipField,
@@ -29,6 +30,7 @@ public sealed class HierarchyReport
         ArgumentNullException.ThrowIfNull(ageCounts);
         ArgumentNullException.ThrowIfNull(tenureCounts);
 
+        GeneratedAt = generatedAt;
         WorkWeek = workWeek;
         RootEmployeeName = rootEmployeeName;
         RelationshipField = relationshipField;
@@ -39,6 +41,11 @@ public sealed class HierarchyReport
         AgeCounts = ageCounts;
         TenureCounts = tenureCounts;
     }
+
+    /// <summary>
+    /// Gets report generation timestamp.
+    /// </summary>
+    public DateTimeOffset GeneratedAt { get; }
 
     /// <summary>
     /// Gets report work week.

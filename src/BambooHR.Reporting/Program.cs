@@ -31,7 +31,14 @@ var builder = Host.CreateDefaultBuilder(args)
         _ = services.AddSingleton<ILoadingNotifier, ConsoleLoadingNotifier>();
         _ = services.AddSingleton<IWorkWeekProvider, WorkWeekProvider>();
         _ = services.AddSingleton<IHierarchyReportBuilder, HierarchyReportBuilder>();
-        _ = services.AddSingleton<IReportWriter, ConsoleReportWriter>();
+        _ = services.AddSingleton<IConsoleReportRenderer, ConsoleReportWriter>();
+        _ = services.AddSingleton<HtmlReportFileStore>();
+        _ = services.AddSingleton<HtmlContentComposer>();
+        _ = services.AddSingleton<IHtmlReportRenderer, HtmlReportRenderer>();
+        _ = services.AddSingleton<PdfReportFileStore>();
+        _ = services.AddSingleton<PdfContentComposer>();
+        _ = services.AddSingleton<IPdfReportRenderer, PdfReportRenderer>();
+        _ = services.AddSingleton<IReportWriter, CompositeReportWriter>();
         _ = services.AddSingleton(_ =>
         {
             var client = new HttpClient

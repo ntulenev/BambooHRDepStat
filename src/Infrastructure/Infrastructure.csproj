@@ -7,9 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="QuestPDF" Version="2026.2.0" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
     <ProjectReference Include="..\Models\Models.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Html\Templates\*.html"
+      LogicalName="Infrastructure.HtmlTemplates.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
