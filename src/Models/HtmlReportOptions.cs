@@ -11,6 +11,11 @@ public sealed class HtmlReportOptions
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether generated HTML should open in the default browser.
+    /// </summary>
+    public bool OpenInBrowser { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the output path for the HTML report.
     /// </summary>
     public string OutputPath { get; set; } = Path.Combine("reports", "bamboohr-hierarchy-report.html");

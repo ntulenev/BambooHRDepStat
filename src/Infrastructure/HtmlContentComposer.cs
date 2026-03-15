@@ -102,7 +102,7 @@ public sealed class HtmlContentComposer
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.DateOfBirth))}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
                 <td>{Encode(row.ManagerName ?? "-")}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatAvailability(row.UnavailabilityEntries))}</td>
+                <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries)}</td>
               </tr>");
         }
 
@@ -261,6 +261,18 @@ public sealed class HtmlContentComposer
         }
 
         return Math.Max(8, (int)Math.Round(value * 100d / maxValue, MidpointRounding.AwayFromZero));
+    }
+
+    private static string BuildAvailabilityMarkup(IReadOnlyList<TimeOffEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        if (entries.Count == 0)
+        {
+            return @"<span class=""availability availability-available"">Available</span>";
+        }
+
+        return $@"<span class=""availability availability-timeoff"">{Encode(ReportPresentationFormatter.FormatAvailability(entries))}</span>";
     }
 
     private static string BuildTeamSizeChartJson(IReadOnlyList<HierarchyTeam> teams)

@@ -18,6 +18,7 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
     private readonly TimeProvider _timeProvider;
     private readonly HtmlReportFileStore _htmlReportFileStore;
     private readonly HtmlContentComposer _htmlContentComposer;
+    private readonly HtmlReportLauncher _htmlReportLauncher;
 
     /// <summary>
     /// Creates HTML renderer.
@@ -26,17 +27,20 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
         BambooHrOptions options,
         TimeProvider timeProvider,
         HtmlReportFileStore htmlReportFileStore,
-        HtmlContentComposer htmlContentComposer)
+        HtmlContentComposer htmlContentComposer,
+        HtmlReportLauncher htmlReportLauncher)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(htmlReportFileStore);
         ArgumentNullException.ThrowIfNull(htmlContentComposer);
+        ArgumentNullException.ThrowIfNull(htmlReportLauncher);
 
         _options = options;
         _timeProvider = timeProvider;
         _htmlReportFileStore = htmlReportFileStore;
         _htmlContentComposer = htmlContentComposer;
+        _htmlReportLauncher = htmlReportLauncher;
     }
 
     /// <inheritdoc/>
@@ -57,5 +61,13 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
 
         _htmlReportFileStore.Save(outputPath, html);
         AnsiConsole.MarkupLine($"[grey]HTML report saved:[/] {Markup.Escape(outputPath)}");
+
+        if (!_options.Html.OpenInBrowser)
+        {
+            return;
+        }
+
+        _htmlReportLauncher.Open(outputPath);
+        AnsiConsole.MarkupLine("[grey]HTML report opened in default browser.[/]");
     }
 }

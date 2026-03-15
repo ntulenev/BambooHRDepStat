@@ -249,6 +249,29 @@
 
     .muted { color: var(--muted); }
 
+    .availability {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      line-height: 1.35;
+      border: 1px solid transparent;
+    }
+
+    .availability-available {
+      color: #9de2b7;
+      background: rgba(122, 208, 164, 0.14);
+      border-color: rgba(122, 208, 164, 0.24);
+    }
+
+    .availability-timeoff {
+      color: #ffb0a6;
+      background: rgba(232, 107, 84, 0.14);
+      border-color: rgba(232, 107, 84, 0.24);
+    }
+
     .empty {
       color: var(--muted);
       font-style: italic;

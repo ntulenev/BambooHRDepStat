@@ -34,6 +34,7 @@ var builder = Host.CreateDefaultBuilder(args)
         _ = services.AddSingleton<IConsoleReportRenderer, ConsoleReportWriter>();
         _ = services.AddSingleton<HtmlReportFileStore>();
         _ = services.AddSingleton<HtmlContentComposer>();
+        _ = services.AddSingleton<HtmlReportLauncher>();
         _ = services.AddSingleton<IHtmlReportRenderer, HtmlReportRenderer>();
         _ = services.AddSingleton<PdfReportFileStore>();
         _ = services.AddSingleton<PdfContentComposer>();
