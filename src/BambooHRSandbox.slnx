@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="Abstractions/Abstractions.csproj" />
+  <Project Path="BambooHR.Reporting/BambooHR.Reporting.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" />
+  <Project Path="Logic.Tests/Logic.Tests.csproj" />
+  <Project Path="Logic/Logic.csproj" />
+  <Project Path="Models/Models.csproj" />
+</Solution>

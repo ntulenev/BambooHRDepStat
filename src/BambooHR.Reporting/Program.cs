@@ -1,0 +1,50 @@
+using Abstractions;
+
+using BambooHR.Reporting.Utility;
+
+using Infrastructure;
+
+using Logic;
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+using Models;
+
+using var cts = new CancellationTokenSource();
+
+var builder = Host.CreateDefaultBuilder(args)
+    .UseContentRoot(AppContext.BaseDirectory)
+    .ConfigureServices((hostContext, services) =>
+    {
+        var options = hostContext.Configuration
+            .GetRequiredSection(BambooHrOptions.SectionName)
+            .Get<BambooHrOptions>()
+            ?? throw new InvalidOperationException(
+                $"Configuration section '{BambooHrOptions.SectionName}' is missing.");
+        options.Validate();
+
+        _ = services.AddSingleton(options);
+        _ = services.AddSingleton(TimeProvider.System);
+        _ = services.AddSingleton<IApplication, Application>();
+        _ = services.AddSingleton<IWorkWeekProvider, WorkWeekProvider>();
+        _ = services.AddSingleton<IHierarchyReportBuilder, HierarchyReportBuilder>();
+        _ = services.AddSingleton<IReportWriter, ConsoleReportWriter>();
+        _ = services.AddSingleton(_ =>
+        {
+            var client = new HttpClient
+            {
+                BaseAddress = new Uri(
+                    $"https://{options.Organization}.bamboohr.com",
+                    UriKind.Absolute)
+            };
+
+            return client;
+        });
+        _ = services.AddSingleton<IBambooHrClient, BambooHrClient>();
+    });
+var host = builder.Build();
+using var scope = host.Services.CreateScope();
+var app = scope.ServiceProvider.GetRequiredService<IApplication>();
+await app.RunAsync(args, cts.Token).ConfigureAwait(false);
