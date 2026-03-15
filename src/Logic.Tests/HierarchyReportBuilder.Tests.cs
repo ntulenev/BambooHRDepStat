@@ -282,6 +282,141 @@ public sealed class HierarchyReportBuilderTests
             });
     }
 
+    [Fact]
+    public async Task BuildAsyncAssignsCountrySpecificHolidayOnlyToMatchingEmployees()
+    {
+        var client = new FakeBambooHrClient(
+            [
+                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text"),
+                new BambooHrField("location", "Location", "location", "text"),
+                new BambooHrField("country", "Country", "country", "text"),
+                new BambooHrField("city", "City", "city", "text")
+            ],
+            [
+                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(2, "Branko Borg", "Branko", "Borg", "Branko", "Engineer", "Active"),
+                new BasicEmployee(3, "Clara Weiss", "Clara", "Weiss", "Clara", "Engineer", "Active")
+            ],
+            new Dictionary<int, IReadOnlyDictionary<string, string?>>
+            {
+                [1] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Leadership",
+                    ["jobTitle"] = "Director",
+                    ["location"] = "Berlin, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Berlin"
+                },
+                [2] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Valletta, Malta",
+                    ["country"] = "Malta",
+                    ["city"] = "Valletta"
+                },
+                [3] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Hamburg, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Hamburg"
+                }
+            },
+            [
+                new TimeOffEntry(
+                    500,
+                    TimeOffEntryType.Holiday,
+                    employeeId: null,
+                    "Malta National Day",
+                    new DateOnly(2026, 9, 21),
+                    new DateOnly(2026, 9, 21))
+            ]);
+
+        var builder = new HierarchyReportBuilder(
+            client,
+            new NoOpLoadingNotifier(),
+            new StubWorkWeekProvider(new WorkWeek(
+                new DateOnly(2026, 9, 21),
+                new DateOnly(2026, 9, 25))),
+            new FakeTimeProvider(new DateTimeOffset(2026, 9, 21, 8, 0, 0, TimeSpan.Zero)));
+
+        var report = await builder.BuildAsync(1, CancellationToken.None);
+
+        Assert.Empty(report.Rows.Single(row => row.EmployeeId == 1).UnavailabilityEntries);
+        Assert.Empty(report.Rows.Single(row => row.EmployeeId == 3).UnavailabilityEntries);
+
+        var maltaEmployeeEntries = report.Rows.Single(row => row.EmployeeId == 2).UnavailabilityEntries;
+        var holiday = Assert.Single(maltaEmployeeEntries);
+        Assert.Equal(TimeOffEntryType.Holiday, holiday.Type);
+        Assert.Equal("Malta National Day", holiday.Name);
+    }
+
+    [Fact]
+    public async Task BuildAsyncAssignsSharedHolidayToSingleCountryHierarchy()
+    {
+        var client = new FakeBambooHrClient(
+            [
+                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text"),
+                new BambooHrField("location", "Location", "location", "text"),
+                new BambooHrField("country", "Country", "country", "text"),
+                new BambooHrField("city", "City", "city", "text")
+            ],
+            [
+                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(2, "Branko Borg", "Branko", "Borg", "Branko", "Engineer", "Active")
+            ],
+            new Dictionary<int, IReadOnlyDictionary<string, string?>>
+            {
+                [1] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Leadership",
+                    ["jobTitle"] = "Director",
+                    ["location"] = "Valletta, Malta",
+                    ["country"] = "Malta",
+                    ["city"] = "Valletta"
+                },
+                [2] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Sliema, Malta",
+                    ["country"] = "Malta",
+                    ["city"] = "Sliema"
+                }
+            },
+            [
+                new TimeOffEntry(
+                    700,
+                    TimeOffEntryType.Holiday,
+                    employeeId: null,
+                    "Republic Day",
+                    new DateOnly(2026, 12, 13),
+                    new DateOnly(2026, 12, 13))
+            ]);
+
+        var builder = new HierarchyReportBuilder(
+            client,
+            new NoOpLoadingNotifier(),
+            new StubWorkWeekProvider(new WorkWeek(
+                new DateOnly(2026, 12, 14),
+                new DateOnly(2026, 12, 18))),
+            new FakeTimeProvider(new DateTimeOffset(2026, 12, 14, 8, 0, 0, TimeSpan.Zero)));
+
+        var report = await builder.BuildAsync(1, CancellationToken.None);
+
+        foreach (var row in report.Rows)
+        {
+            var holiday = Assert.Single(row.UnavailabilityEntries);
+            Assert.Equal(TimeOffEntryType.Holiday, holiday.Type);
+            Assert.Equal("Republic Day", holiday.Name);
+        }
+    }
+
     private sealed class FakeBambooHrClient : IBambooHrClient
     {
         private readonly IReadOnlyList<BambooHrField> _fields;

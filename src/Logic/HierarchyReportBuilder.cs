@@ -135,6 +135,13 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         var childrenByManager = relationshipField.UsesEmployeeId
             ? BuildEmployeeIdHierarchy(profiles)
             : BuildNameHierarchy(profiles);
+        var includedEmployeeIds = CollectHierarchyEmployeeIds(
+            rootEmployeeId,
+            childrenByManager,
+            profilesByEmployeeId);
+        var includedProfiles = includedEmployeeIds
+            .Select(id => profilesByEmployeeId[id])
+            .ToArray();
 
         _loadingNotifier.SetStatus("Loading who's out for the current work week...");
         var whoIsOut = await _bambooHrClient.GetWhosOutAsync(
@@ -143,16 +150,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                 ct)
             .ConfigureAwait(false);
 
-        var employeeEntries = whoIsOut
-            .Where(entry => entry.Type == TimeOffEntryType.TimeOff && entry.EmployeeId.HasValue)
-            .GroupBy(entry => entry.EmployeeId!.Value)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<TimeOffEntry>)[
-                    .. group
-                    .OrderBy(entry => entry.Start)
-                    .ThenBy(entry => entry.End)
-                ]);
+        var employeeEntries = BuildEmployeeEntries(includedProfiles, whoIsOut);
 
         List<HierarchyReportRow> rows = [];
         _loadingNotifier.SetStatus("Building hierarchy report...");
@@ -164,9 +162,6 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             employeeEntries,
             rows);
         var teams = BuildTeams(rows, profilesByEmployeeId, childrenByManager);
-        var includedProfiles = rows
-            .Select(row => profilesByEmployeeId[row.EmployeeId])
-            .ToArray();
         _loadingNotifier.SetStatus("Calculating distributions and summaries...");
         var locationCounts = BuildLocationCounts(includedProfiles);
         var countryCityCounts = BuildCountryCityCounts(includedProfiles);
@@ -184,6 +179,63 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             countryCityCounts,
             ageCounts,
             tenureCounts);
+    }
+
+    private static Dictionary<int, IReadOnlyList<TimeOffEntry>> BuildEmployeeEntries(
+        EmployeeProfile[] includedProfiles,
+        IReadOnlyList<TimeOffEntry> whoIsOut)
+    {
+        ArgumentNullException.ThrowIfNull(includedProfiles);
+        ArgumentNullException.ThrowIfNull(whoIsOut);
+
+        var timeOffEntries = whoIsOut
+            .Where(entry => entry.Type == TimeOffEntryType.TimeOff && entry.EmployeeId.HasValue)
+            .GroupBy(entry => entry.EmployeeId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderBy(entry => entry.Start)
+                    .ThenBy(entry => entry.End)
+                    .ThenBy(entry => entry.Id)
+                    .ToArray());
+        var holidayEntries = whoIsOut
+            .Where(entry => entry.Type == TimeOffEntryType.Holiday)
+            .OrderBy(entry => entry.Start)
+            .ThenBy(entry => entry.End)
+            .ThenBy(entry => entry.Id)
+            .ToArray();
+        var distinctCountryCount = includedProfiles
+            .Select(ResolveCountryLabel)
+            .Where(country => !string.Equals(country, "Unknown", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        var entriesByEmployee = new Dictionary<int, IReadOnlyList<TimeOffEntry>>();
+
+        foreach (var profile in includedProfiles)
+        {
+            List<TimeOffEntry> employeeEntries = [];
+
+            if (timeOffEntries.TryGetValue(profile.EmployeeId, out var personalEntries))
+            {
+                employeeEntries.AddRange(personalEntries);
+            }
+
+            employeeEntries.AddRange(
+                holidayEntries.Where(holiday => IsHolidayApplicable(
+                    profile,
+                    holiday,
+                    distinctCountryCount)));
+
+            entriesByEmployee[profile.EmployeeId] =
+            [
+                .. employeeEntries
+                    .OrderBy(entry => entry.Start)
+                    .ThenBy(entry => entry.End)
+                    .ThenBy(entry => entry.Id)
+            ];
+        }
+
+        return entriesByEmployee;
     }
 
     private static List<HierarchyTeam> BuildTeams(
@@ -348,6 +400,21 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         return childrenByManager;
     }
 
+    private static HashSet<int> CollectHierarchyEmployeeIds(
+        int rootEmployeeId,
+        IReadOnlyDictionary<int, List<int>> childrenByManager,
+        IReadOnlyDictionary<int, EmployeeProfile> profilesByEmployeeId)
+    {
+        var employeeIds = new HashSet<int>();
+        CollectHierarchyEmployeeIds(
+            rootEmployeeId,
+            childrenByManager,
+            profilesByEmployeeId,
+            employeeIds);
+
+        return employeeIds;
+    }
+
     private static Dictionary<int, List<int>> BuildNameHierarchy(
         IReadOnlyList<EmployeeProfile> profiles)
     {
@@ -485,6 +552,34 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                 childrenByManager,
                 employeeEntries,
                 rows);
+        }
+    }
+
+    private static void CollectHierarchyEmployeeIds(
+        int employeeId,
+        IReadOnlyDictionary<int, List<int>> childrenByManager,
+        IReadOnlyDictionary<int, EmployeeProfile> profilesByEmployeeId,
+        ISet<int> employeeIds)
+    {
+        if (!profilesByEmployeeId.ContainsKey(employeeId)
+            || !employeeIds.Add(employeeId)
+            || !childrenByManager.TryGetValue(employeeId, out var children))
+        {
+            return;
+        }
+
+        foreach (var childId in children
+                     .Distinct()
+                     .OrderBy(
+                         id => profilesByEmployeeId[id].DisplayName,
+                         StringComparer.OrdinalIgnoreCase)
+                     .ThenBy(id => id))
+        {
+            CollectHierarchyEmployeeIds(
+                childId,
+                childrenByManager,
+                profilesByEmployeeId,
+                employeeIds);
         }
     }
 
@@ -941,6 +1036,45 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         return TryParseLocation(profile.Location, out var city, out _)
             ? city
             : null;
+    }
+
+    private static bool IsHolidayApplicable(
+        EmployeeProfile profile,
+        TimeOffEntry holiday,
+        int distinctCountryCount)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(holiday);
+
+        if (distinctCountryCount <= 1)
+        {
+            return true;
+        }
+
+        var holidayName = Normalize(holiday.Name);
+        if (string.IsNullOrWhiteSpace(holidayName))
+        {
+            return false;
+        }
+
+        var country = Normalize(ResolveCountryLabel(profile));
+        if (!string.IsNullOrWhiteSpace(country)
+            && !string.Equals(country, "unknown", StringComparison.OrdinalIgnoreCase)
+            && holidayName.Contains(country, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var city = Normalize(ResolveCityLabel(profile) ?? string.Empty);
+        if (!string.IsNullOrWhiteSpace(city)
+            && holidayName.Contains(city, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var location = Normalize(profile.Location ?? string.Empty);
+        return !string.IsNullOrWhiteSpace(location)
+            && holidayName.Contains(location, StringComparison.Ordinal);
     }
 
     private static bool TryParseLocation(
