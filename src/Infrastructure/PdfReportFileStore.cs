@@ -8,8 +8,6 @@ namespace Infrastructure;
 /// </summary>
 public sealed class PdfReportFileStore
 {
-    private readonly int _instanceMarker = 1;
-
     public void Save(string outputPath, IDocument document)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -25,4 +23,6 @@ public sealed class PdfReportFileStore
         var pdfBytes = document.GeneratePdf();
         File.WriteAllBytes(outputPath, pdfBytes);
     }
+
+    private readonly int _instanceMarker = 1;
 }

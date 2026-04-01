@@ -7,8 +7,6 @@ namespace Infrastructure;
 /// </summary>
 public sealed class HtmlReportFileStore
 {
-    private readonly int _instanceMarker = 1;
-
     public void Save(string outputPath, string html)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -23,4 +21,6 @@ public sealed class HtmlReportFileStore
 
         File.WriteAllText(outputPath, html, Encoding.UTF8);
     }
+
+    private readonly int _instanceMarker = 1;
 }

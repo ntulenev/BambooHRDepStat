@@ -102,6 +102,7 @@ public sealed class HierarchyReportBuilderTests
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
             new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyFieldResolver(client),
             new HierarchyTopologyBuilder(),
             new EmployeeAvailabilityResolver(),
             new HierarchyAnalytics(),
@@ -240,6 +241,7 @@ public sealed class HierarchyReportBuilderTests
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
             new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyFieldResolver(client),
             new HierarchyTopologyBuilder(),
             new EmployeeAvailabilityResolver(),
             new HierarchyAnalytics(),
@@ -357,6 +359,7 @@ public sealed class HierarchyReportBuilderTests
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
             new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyFieldResolver(client),
             new HierarchyTopologyBuilder(),
             new EmployeeAvailabilityResolver(),
             new HierarchyAnalytics(),
@@ -471,6 +474,7 @@ public sealed class HierarchyReportBuilderTests
                 new DateOnly(2026, 9, 21),
                 new DateOnly(2026, 9, 25))),
             new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyFieldResolver(client),
             new HierarchyTopologyBuilder(),
             new EmployeeAvailabilityResolver(),
             new HierarchyAnalytics(),
@@ -491,135 +495,15 @@ public sealed class HierarchyReportBuilderTests
         Assert.Equal(["Malta"], holiday.AssociatedCountries);
     }
 
-    private static BambooHrOptions CreateOptions(
+    private static HierarchyReportSettings CreateOptions(
         int recentHirePeriodDays = 30,
         int availabilityLookaheadDays = 7,
         Dictionary<string, string[]>? holidayCountryMappings = null)
     {
-        var options = new BambooHrOptions
-        {
-            Organization = "test",
-            Token = "token",
-            EmployeeId = 1,
-            RecentHirePeriodDays = recentHirePeriodDays,
-            AvailabilityLookaheadDays = availabilityLookaheadDays
-        };
-
-        if (holidayCountryMappings is not null)
-        {
-            foreach (var mapping in holidayCountryMappings)
-            {
-                options.HolidayCountryMappings[mapping.Key] = mapping.Value;
-            }
-        }
-
-        return options;
-    }
-
-    private sealed class FakeBambooHrClient : IBambooHrClient
-    {
-        private readonly IReadOnlyList<BambooHrField> _fields;
-        private readonly IReadOnlyList<BasicEmployee> _employees;
-        private readonly IReadOnlyDictionary<int, IReadOnlyDictionary<string, string?>> _employeeFields;
-        private readonly IReadOnlyList<TimeOffEntry> _timeOffEntries;
-
-        public FakeBambooHrClient(
-            IReadOnlyList<BambooHrField> fields,
-            IReadOnlyList<BasicEmployee> employees,
-            IReadOnlyDictionary<int, IReadOnlyDictionary<string, string?>> employeeFields,
-            IReadOnlyList<TimeOffEntry> timeOffEntries)
-        {
-            _fields = fields;
-            _employees = employees;
-            _employeeFields = employeeFields;
-            _timeOffEntries = timeOffEntries;
-        }
-
-        public Task<IReadOnlyList<BambooHrField>> GetFieldsAsync(CancellationToken ct)
-        {
-            _ = ct;
-            return Task.FromResult(_fields);
-        }
-
-        public Task<IReadOnlyList<BasicEmployee>> GetEmployeesAsync(CancellationToken ct)
-        {
-            _ = ct;
-            return Task.FromResult(_employees);
-        }
-
-        public Task<EmployeeFieldValues> GetEmployeeFieldsAsync(
-            EmployeeId employeeId,
-            IReadOnlyCollection<string> fieldKeys,
-            CancellationToken ct)
-        {
-            _ = fieldKeys;
-            _ = ct;
-            return Task.FromResult(new EmployeeFieldValues(employeeId, _employeeFields[employeeId.Value]));
-        }
-
-        public Task<IReadOnlyList<TimeOffEntry>> GetWhosOutAsync(
-            DateOnly startDate,
-            DateOnly endDate,
-            CancellationToken ct)
-        {
-            _ = startDate;
-            _ = endDate;
-            _ = ct;
-            return Task.FromResult(_timeOffEntries);
-        }
-    }
-
-    private sealed class StubAvailabilityWindowProvider : IAvailabilityWindowProvider
-    {
-        private readonly AvailabilityWindow _availabilityWindow;
-
-        public StubAvailabilityWindowProvider(AvailabilityWindow availabilityWindow)
-        {
-            _availabilityWindow = availabilityWindow;
-        }
-
-        public AvailabilityWindow GetAvailabilityWindow(DateTimeOffset currentDate)
-        {
-            _ = currentDate;
-            return _availabilityWindow;
-        }
-    }
-
-    private sealed class NoOpLoadingNotifier : ILoadingNotifier
-    {
-        public Task<T> RunAsync<T>(
-            string description,
-            Func<CancellationToken, Task<T>> action,
-            CancellationToken ct)
-        {
-            _ = description;
-            return action(ct);
-        }
-
-        public void SetProgress(string description, int completed, int total)
-        {
-            _ = description;
-            _ = completed;
-            _ = total;
-        }
-
-        public void SetStatus(string description)
-        {
-            _ = description;
-        }
-    }
-
-    private sealed class FakeTimeProvider : TimeProvider
-    {
-        private readonly DateTimeOffset _currentDate;
-
-        public FakeTimeProvider(DateTimeOffset currentDate)
-        {
-            _currentDate = currentDate;
-        }
-
-        public override DateTimeOffset GetUtcNow() => _currentDate.ToUniversalTime();
-
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+        return new HierarchyReportSettings(
+            new EmployeeId(1),
+            availabilityLookaheadDays,
+            recentHirePeriodDays,
+            holidayCountryMappings ?? []);
     }
 }

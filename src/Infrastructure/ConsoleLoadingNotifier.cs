@@ -9,9 +9,6 @@ namespace Infrastructure;
 /// </summary>
 public sealed class ConsoleLoadingNotifier : ILoadingNotifier
 {
-    private readonly Lock _sync = new();
-    private ProgressTask? _task;
-
     /// <inheritdoc/>
     public Task<T> RunAsync<T>(
         string description,
@@ -35,23 +32,15 @@ public sealed class ConsoleLoadingNotifier : ILoadingNotifier
                 var task = context.AddTask(description, autoStart: true, maxValue: 100);
                 task.IsIndeterminate = true;
 
-                using var scope = new TaskScope(this, task);
+                AttachTask(task);
                 try
                 {
                     return await action(ct).ConfigureAwait(false);
                 }
                 finally
                 {
-                    lock (_sync)
-                    {
-                        if (_task is not null)
-                        {
-                            _task.Description = "[green]Completed[/]";
-                            _task.IsIndeterminate = false;
-                            _task.Value = _task.MaxValue;
-                            _task.StopTask();
-                        }
-                    }
+                    CompleteTask();
+                    ClearTask();
                 }
             });
     }
@@ -98,25 +87,40 @@ public sealed class ConsoleLoadingNotifier : ILoadingNotifier
         }
     }
 
-    private sealed class TaskScope : IDisposable
+    private void AttachTask(ProgressTask task)
     {
-        private readonly ConsoleLoadingNotifier _owner;
+        ArgumentNullException.ThrowIfNull(task);
 
-        public TaskScope(ConsoleLoadingNotifier owner, ProgressTask task)
+        lock (_sync)
         {
-            _owner = owner;
-            lock (_owner._sync)
-            {
-                _owner._task = task;
-            }
-        }
-
-        public void Dispose()
-        {
-            lock (_owner._sync)
-            {
-                _owner._task = null;
-            }
+            _task = task;
         }
     }
+
+    private void CompleteTask()
+    {
+        lock (_sync)
+        {
+            if (_task is null)
+            {
+                return;
+            }
+
+            _task.Description = "[green]Completed[/]";
+            _task.IsIndeterminate = false;
+            _task.Value = _task.MaxValue;
+            _task.StopTask();
+        }
+    }
+
+    private void ClearTask()
+    {
+        lock (_sync)
+        {
+            _task = null;
+        }
+    }
+
+    private readonly Lock _sync = new();
+    private ProgressTask? _task;
 }

@@ -5,9 +5,6 @@ namespace Infrastructure;
 /// </summary>
 internal static class HtmlTemplateLoader
 {
-    private static readonly Lazy<string> _hierarchyReportTemplate =
-        new(() => LoadTemplate("Infrastructure.HtmlTemplates.HierarchyReport.html"));
-
     public static string LoadHierarchyReportTemplate() => _hierarchyReportTemplate.Value;
 
     private static string LoadTemplate(string resourceName)
@@ -24,4 +21,7 @@ internal static class HtmlTemplateLoader
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
+
+    private static readonly Lazy<string> _hierarchyReportTemplate =
+        new(() => LoadTemplate("Infrastructure.HtmlTemplates.HierarchyReport.html"));
 }

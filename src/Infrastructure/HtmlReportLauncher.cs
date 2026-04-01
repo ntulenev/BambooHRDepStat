@@ -7,8 +7,6 @@ namespace Infrastructure;
 /// </summary>
 public sealed class HtmlReportLauncher
 {
-    private readonly int _instanceMarker = 1;
-
     /// <summary>
     /// Opens the generated HTML report in the default browser.
     /// </summary>
@@ -23,4 +21,6 @@ public sealed class HtmlReportLauncher
             UseShellExecute = true
         });
     }
+
+    private readonly int _instanceMarker = 1;
 }
