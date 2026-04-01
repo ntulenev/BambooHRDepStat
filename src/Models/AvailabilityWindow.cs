@@ -3,12 +3,12 @@ namespace Models;
 /// <summary>
 /// Inclusive report date range used for availability and summary calculations.
 /// </summary>
-public sealed class WorkWeek
+public sealed class AvailabilityWindow
 {
     /// <summary>
     /// Creates report date range.
     /// </summary>
-    public WorkWeek(DateOnly start, DateOnly end)
+    public AvailabilityWindow(DateOnly start, DateOnly end)
     {
         if (end < start)
         {

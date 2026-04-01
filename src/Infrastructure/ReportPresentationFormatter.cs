@@ -10,12 +10,19 @@ namespace Infrastructure;
 /// </summary>
 internal static class ReportPresentationFormatter
 {
+    internal enum AvailabilityState
+    {
+        Available = 0,
+        Upcoming = 1,
+        UnavailableToday = 2
+    }
+
     public static string FormatDate(DateOnly? date)
     {
         return date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "-";
     }
 
-    public static string FormatAvailability(IReadOnlyList<TimeOffEntry> entries)
+    public static string FormatAvailability(IReadOnlyList<TimeOffEntry> entries, DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
@@ -24,7 +31,26 @@ internal static class ReportPresentationFormatter
             return "Available";
         }
 
-        return string.Join("; ", entries.Select(FormatEntry));
+        var details = string.Join("; ", entries.Select(FormatEntry));
+        return GetAvailabilityState(entries, referenceDate) == AvailabilityState.Upcoming
+            ? $"Upcoming: {details}"
+            : details;
+    }
+
+    public static AvailabilityState GetAvailabilityState(
+        IReadOnlyList<TimeOffEntry> entries,
+        DateOnly referenceDate)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        if (entries.Count == 0)
+        {
+            return AvailabilityState.Available;
+        }
+
+        return entries.Any(entry => entry.Start <= referenceDate && entry.End >= referenceDate)
+            ? AvailabilityState.UnavailableToday
+            : AvailabilityState.Upcoming;
     }
 
     public static IReadOnlyList<KeyValuePair<string, int>> GetJobTitleCounts(HierarchyReport report)

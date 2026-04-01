@@ -98,7 +98,7 @@ public sealed class HierarchyReportBuilderTests
             client,
             CreateOptions(),
             new NoOpLoadingNotifier(),
-            new StubWorkWeekProvider(new WorkWeek(
+            new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
             new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
@@ -230,7 +230,7 @@ public sealed class HierarchyReportBuilderTests
             client,
             CreateOptions(recentHirePeriodDays: 15),
             new NoOpLoadingNotifier(),
-            new StubWorkWeekProvider(new WorkWeek(
+            new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
             new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
@@ -343,7 +343,7 @@ public sealed class HierarchyReportBuilderTests
             client,
             CreateOptions(),
             new NoOpLoadingNotifier(),
-            new StubWorkWeekProvider(new WorkWeek(
+            new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
             new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
@@ -443,7 +443,7 @@ public sealed class HierarchyReportBuilderTests
             client,
             CreateOptions(),
             new NoOpLoadingNotifier(),
-            new StubWorkWeekProvider(new WorkWeek(
+            new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 9, 21),
                 new DateOnly(2026, 9, 25))),
             new FakeTimeProvider(new DateTimeOffset(2026, 9, 21, 8, 0, 0, TimeSpan.Zero)));
@@ -507,7 +507,7 @@ public sealed class HierarchyReportBuilderTests
             client,
             CreateOptions(),
             new NoOpLoadingNotifier(),
-            new StubWorkWeekProvider(new WorkWeek(
+            new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 12, 14),
                 new DateOnly(2026, 12, 18))),
             new FakeTimeProvider(new DateTimeOffset(2026, 12, 14, 8, 0, 0, TimeSpan.Zero)));
@@ -522,14 +522,17 @@ public sealed class HierarchyReportBuilderTests
         }
     }
 
-    private static BambooHrOptions CreateOptions(int recentHirePeriodDays = 30)
+    private static BambooHrOptions CreateOptions(
+        int recentHirePeriodDays = 30,
+        int availabilityLookaheadDays = 7)
     {
         return new BambooHrOptions
         {
             Organization = "test",
             Token = "token",
             EmployeeId = 1,
-            RecentHirePeriodDays = recentHirePeriodDays
+            RecentHirePeriodDays = recentHirePeriodDays,
+            AvailabilityLookaheadDays = availabilityLookaheadDays
         };
     }
 
@@ -586,19 +589,19 @@ public sealed class HierarchyReportBuilderTests
         }
     }
 
-    private sealed class StubWorkWeekProvider : IWorkWeekProvider
+    private sealed class StubAvailabilityWindowProvider : IAvailabilityWindowProvider
     {
-        private readonly WorkWeek _workWeek;
+        private readonly AvailabilityWindow _availabilityWindow;
 
-        public StubWorkWeekProvider(WorkWeek workWeek)
+        public StubAvailabilityWindowProvider(AvailabilityWindow availabilityWindow)
         {
-            _workWeek = workWeek;
+            _availabilityWindow = availabilityWindow;
         }
 
-        public WorkWeek GetWorkWeek(DateTimeOffset currentDate)
+        public AvailabilityWindow GetAvailabilityWindow(DateTimeOffset currentDate)
         {
             _ = currentDate;
-            return _workWeek;
+            return _availabilityWindow;
         }
     }
 

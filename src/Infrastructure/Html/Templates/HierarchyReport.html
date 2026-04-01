@@ -272,6 +272,12 @@
       border-color: rgba(232, 107, 84, 0.24);
     }
 
+    .availability-upcoming {
+      color: #f5d47c;
+      background: rgba(243, 203, 103, 0.14);
+      border-color: rgba(243, 203, 103, 0.28);
+    }
+
     .empty {
       color: var(--muted);
       font-style: italic;
@@ -382,6 +388,14 @@
       width: 100%;
       height: auto;
       display: block;
+    }
+
+    .chart-segment {
+      transition: opacity 140ms ease;
+    }
+
+    .chart-segment:hover {
+      opacity: 0.82;
     }
 
     .axis-label {
@@ -574,6 +588,12 @@ __RECENT_HIRE_ROWS__
       const teamGradeData = __TEAM_GRADE_JSON__;
 
       const formatPercent = (value, total) => total === 0 ? '0.0%' : `${((value / total) * 100).toFixed(1)}%`;
+      const escapeHtml = (value) => String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
 
       function renderLegend(containerId, items, total) {
         const container = document.getElementById(containerId);
@@ -613,8 +633,10 @@ __RECENT_HIRE_ROWS__
 
         const slices = items.map(item => {
           const length = circumference * (item.value / total);
+          const title = `${item.label}: ${item.value} people (${formatPercent(item.value, total)})`;
           const slice = `
             <circle
+              class="chart-segment"
               cx="${center}"
               cy="${center}"
               r="${radius}"
@@ -625,6 +647,7 @@ __RECENT_HIRE_ROWS__
               stroke-dasharray="${length} ${circumference - length}"
               stroke-dashoffset="${-offset}"
               transform="rotate(-90 ${center} ${center})">
+              <title>${escapeHtml(title)}</title>
             </circle>`;
           offset += length;
           return slice;
@@ -714,7 +737,8 @@ __RECENT_HIRE_ROWS__
           item.segments.forEach(segment => {
             const segmentHeight = segment.value === 0 ? 0 : (plotHeight * segment.value / maxValue);
             currentY -= segmentHeight;
-            svg += `<rect x="${x}" y="${currentY}" width="${barWidth}" height="${segmentHeight}" rx="2" fill="${segment.color}"></rect>`;
+            const title = `${item.label} | ${segment.label}: ${segment.value}`;
+            svg += `<rect class="chart-segment" x="${x}" y="${currentY}" width="${barWidth}" height="${segmentHeight}" rx="2" fill="${segment.color}"><title>${escapeHtml(title)}</title></rect>`;
           });
 
           svg += `<text class="axis-label" x="${x + barWidth / 2}" y="${currentY - 10}" text-anchor="middle">${item.total}</text>`;

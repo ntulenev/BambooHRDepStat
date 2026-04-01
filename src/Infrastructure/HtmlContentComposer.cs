@@ -61,7 +61,7 @@ public sealed class HtmlContentComposer
                 ["__GENERATED_AT__"] = Encode(
                     report.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)),
                 ["__WORK_WEEK__"] = Encode(
-                    $"{report.WorkWeek.Start:yyyy-MM-dd} to {report.WorkWeek.End:yyyy-MM-dd}"),
+                    $"{report.AvailabilityWindow.Start:yyyy-MM-dd} to {report.AvailabilityWindow.End:yyyy-MM-dd}"),
                 ["__RELATIONSHIP__"] = Encode(
                     $"{report.RelationshipField.DisplayName} ({(report.RelationshipField.UsesEmployeeId ? "employee ID" : "employee name")})"),
                 ["__TOTAL_PEOPLE__"] = report.Rows.Count.ToString(CultureInfo.InvariantCulture),
@@ -110,7 +110,7 @@ public sealed class HtmlContentComposer
                 <td>{Encode(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
                 <td>{Encode(row.ManagerName ?? "-")}</td>
-                <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries)}</td>
+                <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries, referenceDate)}</td>
               </tr>");
         }
 
@@ -304,16 +304,22 @@ public sealed class HtmlContentComposer
         return Math.Max(8, (int)Math.Round(value * 100d / maxValue, MidpointRounding.AwayFromZero));
     }
 
-    private static string BuildAvailabilityMarkup(IReadOnlyList<TimeOffEntry> entries)
+    private static string BuildAvailabilityMarkup(
+        IReadOnlyList<TimeOffEntry> entries,
+        DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        if (entries.Count == 0)
+        var state = ReportPresentationFormatter.GetAvailabilityState(entries, referenceDate);
+        var cssClass = state switch
         {
-            return @"<span class=""availability availability-available"">Available</span>";
-        }
+            ReportPresentationFormatter.AvailabilityState.Available => "availability-available",
+            ReportPresentationFormatter.AvailabilityState.Upcoming => "availability-upcoming",
+            ReportPresentationFormatter.AvailabilityState.UnavailableToday => "availability-timeoff",
+            _ => throw new InvalidOperationException("Unknown availability state.")
+        };
 
-        return $@"<span class=""availability availability-timeoff"">{Encode(ReportPresentationFormatter.FormatAvailability(entries))}</span>";
+        return $@"<span class=""availability {cssClass}"">{Encode(ReportPresentationFormatter.FormatAvailability(entries, referenceDate))}</span>";
     }
 
     private static string BuildTeamSizeChartJson(IReadOnlyList<HierarchyTeam> teams)

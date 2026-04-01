@@ -26,6 +26,11 @@ public sealed class BambooHrOptions
     public int EmployeeId { get; set; }
 
     /// <summary>
+    /// Gets or sets how many days ahead availability should be checked, starting from today.
+    /// </summary>
+    public int AvailabilityLookaheadDays { get; set; } = 7;
+
+    /// <summary>
     /// Gets or sets the number of days used to highlight recent hires in the report.
     /// </summary>
     public int RecentHirePeriodDays { get; set; } = 30;
@@ -60,6 +65,12 @@ public sealed class BambooHrOptions
         {
             throw new InvalidOperationException(
                 $"{SectionName}:EmployeeId must be greater than zero.");
+        }
+
+        if (AvailabilityLookaheadDays < 0)
+        {
+            throw new InvalidOperationException(
+                $"{SectionName}:AvailabilityLookaheadDays must be greater than or equal to zero.");
         }
 
         if (RecentHirePeriodDays <= 0)

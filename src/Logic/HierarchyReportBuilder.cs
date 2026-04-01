@@ -63,7 +63,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
     private readonly IBambooHrClient _bambooHrClient;
     private readonly BambooHrOptions _options;
     private readonly ILoadingNotifier _loadingNotifier;
-    private readonly IWorkWeekProvider _workWeekProvider;
+    private readonly IAvailabilityWindowProvider _availabilityWindowProvider;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -73,19 +73,19 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         IBambooHrClient bambooHrClient,
         BambooHrOptions options,
         ILoadingNotifier loadingNotifier,
-        IWorkWeekProvider workWeekProvider,
+        IAvailabilityWindowProvider availabilityWindowProvider,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(bambooHrClient);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(loadingNotifier);
-        ArgumentNullException.ThrowIfNull(workWeekProvider);
+        ArgumentNullException.ThrowIfNull(availabilityWindowProvider);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         _bambooHrClient = bambooHrClient;
         _options = options;
         _loadingNotifier = loadingNotifier;
-        _workWeekProvider = workWeekProvider;
+        _availabilityWindowProvider = availabilityWindowProvider;
         _timeProvider = timeProvider;
     }
 
@@ -103,7 +103,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 
         var generatedAt = _timeProvider.GetLocalNow();
         _loadingNotifier.SetStatus("Loading availability window and BambooHR field metadata...");
-        var workWeek = _workWeekProvider.GetWorkWeek(generatedAt);
+        var availabilityWindow = _availabilityWindowProvider.GetAvailabilityWindow(generatedAt);
         var fields = await _bambooHrClient.GetFieldsAsync(ct).ConfigureAwait(false);
         _loadingNotifier.SetStatus("Resolving hierarchy relationship field...");
         var relationshipField = await ResolveRelationshipFieldAsync(rootEmployeeId, ct)
@@ -149,12 +149,14 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 
         _loadingNotifier.SetStatus("Loading who's out for the availability window...");
         var whoIsOut = await _bambooHrClient.GetWhosOutAsync(
-                workWeek.Start,
-                workWeek.End,
+                availabilityWindow.Start,
+                availabilityWindow.End,
                 ct)
             .ConfigureAwait(false);
 
-        var employeeEntries = BuildEmployeeEntries(includedProfiles, whoIsOut);
+        var employeeEntries = BuildEmployeeEntries(
+            includedProfiles,
+            whoIsOut);
 
         List<HierarchyReportRow> rows = [];
         _loadingNotifier.SetStatus("Building hierarchy report...");
@@ -173,12 +175,12 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         _loadingNotifier.SetStatus("Calculating distributions and summaries...");
         var locationCounts = BuildLocationCounts(includedProfiles);
         var countryCityCounts = BuildCountryCityCounts(includedProfiles);
-        var ageCounts = BuildAgeCounts(includedProfiles, workWeek.Start);
-        var tenureCounts = BuildTenureCounts(includedProfiles, workWeek.Start);
+        var ageCounts = BuildAgeCounts(includedProfiles, availabilityWindow.Start);
+        var tenureCounts = BuildTenureCounts(includedProfiles, availabilityWindow.Start);
 
         return new HierarchyReport(
             generatedAt,
-            workWeek,
+            availabilityWindow,
             rootEmployee.DisplayName,
             relationshipField,
             rows,

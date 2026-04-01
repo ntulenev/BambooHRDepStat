@@ -129,7 +129,11 @@ public sealed class PdfContentComposer
                     ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate));
                     ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.EmploymentStartDate));
                     ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
-                    ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatAvailability(row.UnavailabilityEntries));
+                    ComposeBodyCell(
+                        table.Cell(),
+                        ReportPresentationFormatter.FormatAvailability(
+                            row.UnavailabilityEntries,
+                            referenceDate));
                 }
             });
         });

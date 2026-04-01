@@ -10,7 +10,7 @@ public sealed class HierarchyReport
     /// </summary>
     public HierarchyReport(
         DateTimeOffset generatedAt,
-        WorkWeek workWeek,
+        AvailabilityWindow availabilityWindow,
         string rootEmployeeName,
         HierarchyRelationshipField relationshipField,
         IReadOnlyList<HierarchyReportRow> rows,
@@ -22,7 +22,7 @@ public sealed class HierarchyReport
         IReadOnlyDictionary<string, int> ageCounts,
         IReadOnlyDictionary<string, int> tenureCounts)
     {
-        ArgumentNullException.ThrowIfNull(workWeek);
+        ArgumentNullException.ThrowIfNull(availabilityWindow);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootEmployeeName);
         ArgumentNullException.ThrowIfNull(relationshipField);
         ArgumentNullException.ThrowIfNull(rows);
@@ -35,7 +35,7 @@ public sealed class HierarchyReport
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(recentHirePeriodDays);
 
         GeneratedAt = generatedAt;
-        WorkWeek = workWeek;
+        AvailabilityWindow = availabilityWindow;
         RootEmployeeName = rootEmployeeName;
         RelationshipField = relationshipField;
         Rows = rows;
@@ -56,7 +56,7 @@ public sealed class HierarchyReport
     /// <summary>
     /// Gets report availability window.
     /// </summary>
-    public WorkWeek WorkWeek { get; }
+    public AvailabilityWindow AvailabilityWindow { get; }
 
     /// <summary>
     /// Gets root employee display name.

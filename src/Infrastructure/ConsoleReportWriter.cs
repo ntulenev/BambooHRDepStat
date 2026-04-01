@@ -32,7 +32,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         AnsiConsole.MarkupLine(
             $"Generated: [grey]{report.GeneratedAt:yyyy-MM-dd HH:mm:ss zzz}[/]");
         AnsiConsole.MarkupLine(
-            $"Availability window: [yellow]{report.WorkWeek.Start:yyyy-MM-dd}[/] to [yellow]{report.WorkWeek.End:yyyy-MM-dd}[/]");
+            $"Availability window: [yellow]{report.AvailabilityWindow.Start:yyyy-MM-dd}[/] to [yellow]{report.AvailabilityWindow.End:yyyy-MM-dd}[/]");
         var relationshipMode = report.RelationshipField.UsesEmployeeId
             ? "employee ID"
             : "employee name";
@@ -86,15 +86,22 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         WriteRecentHires(report);
     }
 
-    private static string FormatUnavailability(IReadOnlyList<TimeOffEntry> entries)
+    private static string FormatUnavailability(
+        IReadOnlyList<TimeOffEntry> entries,
+        DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        return entries.Count == 0
-            ? "[green]Available[/]"
-            : string.Join(
-                Environment.NewLine,
-                entries.Select(FormatEntry));
+        var text = ReportPresentationFormatter.FormatAvailability(entries, referenceDate);
+        var color = ReportPresentationFormatter.GetAvailabilityState(entries, referenceDate) switch
+        {
+            ReportPresentationFormatter.AvailabilityState.Available => "green",
+            ReportPresentationFormatter.AvailabilityState.Upcoming => "yellow",
+            ReportPresentationFormatter.AvailabilityState.UnavailableToday => "red",
+            _ => throw new InvalidOperationException("Unknown availability state.")
+        };
+
+        return $"[{color}]{Escape(text)}[/]";
     }
 
     private static string FormatNode(HierarchyReportRow row, DateOnly referenceDate)
@@ -113,7 +120,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             + location
             + birthDate
             + employmentStart
-            + $"{Environment.NewLine}{FormatUnavailability(row.UnavailabilityEntries)}"
+            + $"{Environment.NewLine}{FormatUnavailability(row.UnavailabilityEntries, referenceDate)}"
             + manager;
     }
 
@@ -370,16 +377,6 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
 
         AnsiConsole.Write(table);
     }
-
-    private static string FormatEntry(TimeOffEntry entry)
-    {
-        var label = entry.Type == TimeOffEntryType.Holiday
-            ? $"Holiday ({Escape(entry.Name)})"
-            : "Time off";
-
-        return $"{label}: {entry.Start:yyyy-MM-dd} - {entry.End:yyyy-MM-dd}";
-    }
-
     private static string FormatDate(DateOnly? date)
     {
         return ReportPresentationFormatter.FormatDate(date);
