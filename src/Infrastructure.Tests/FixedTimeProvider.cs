@@ -1,8 +1,8 @@
-namespace Logic.Tests;
+namespace Infrastructure.Tests;
 
-internal sealed class FakeTimeProvider : TimeProvider
+internal sealed class FixedTimeProvider : TimeProvider
 {
-    public FakeTimeProvider(DateTimeOffset currentDate)
+    public FixedTimeProvider(DateTimeOffset currentDate)
     {
         _currentDate = currentDate;
     }

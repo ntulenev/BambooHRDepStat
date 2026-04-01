@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <NuGetAuditMode>all</NuGetAuditMode>
-    <NoWarn>IDE0058,IDE1006,IDE0005,IDE0300,CA1308,CA1812,CA1849,CA1859</NoWarn>
+    <NoWarn>IDE0058,IDE1006</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,9 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Logic\Logic.csproj" />
-    <ProjectReference Include="..\Abstractions\Abstractions.csproj" />
-    <ProjectReference Include="..\Models\Models.csproj" />
+    <ProjectReference Include="..\BambooHR.Reporting\BambooHR.Reporting.csproj" />
   </ItemGroup>
 
 </Project>
