@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 
+using Abstractions;
+
 using Models;
 
 namespace Infrastructure;
@@ -8,21 +10,16 @@ namespace Infrastructure;
 /// <summary>
 /// Shared formatting helpers for report outputs.
 /// </summary>
-internal static class ReportPresentationFormatter
+public sealed class ReportPresentationFormatter : IReportPresentationFormatter
 {
-    internal enum AvailabilityState
+    /// <inheritdoc />
+    public string FormatDate(DateOnly? dateValue)
     {
-        Available = 0,
-        Upcoming = 1,
-        UnavailableToday = 2
+        return dateValue?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "-";
     }
 
-    public static string FormatDate(DateOnly? date)
-    {
-        return date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "-";
-    }
-
-    public static string FormatAvailability(IReadOnlyList<TimeOffEntry> entries, DateOnly referenceDate)
+    /// <inheritdoc />
+    public string FormatAvailability(IReadOnlyList<TimeOffEntry> entries, DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
@@ -32,12 +29,13 @@ internal static class ReportPresentationFormatter
         }
 
         var details = string.Join("; ", entries.Select(FormatEntry));
-        return GetAvailabilityState(entries, referenceDate) == AvailabilityState.Upcoming
+        return GetAvailabilityState(entries, referenceDate) == ReportAvailabilityState.Upcoming
             ? $"Upcoming: {details}"
             : details;
     }
 
-    public static AvailabilityState GetAvailabilityState(
+    /// <inheritdoc />
+    public ReportAvailabilityState GetAvailabilityState(
         IReadOnlyList<TimeOffEntry> entries,
         DateOnly referenceDate)
     {
@@ -45,21 +43,23 @@ internal static class ReportPresentationFormatter
 
         if (entries.Count == 0)
         {
-            return AvailabilityState.Available;
+            return ReportAvailabilityState.Available;
         }
 
         return entries.Any(entry => entry.Start <= referenceDate && entry.End >= referenceDate)
-            ? AvailabilityState.UnavailableToday
-            : AvailabilityState.Upcoming;
+            ? ReportAvailabilityState.UnavailableToday
+            : ReportAvailabilityState.Upcoming;
     }
 
-    public static IReadOnlyList<KeyValuePair<string, int>> GetJobTitleCounts(HierarchyReport report)
+    /// <inheritdoc />
+    public IReadOnlyList<KeyValuePair<string, int>> GetJobTitleCounts(
+        IReadOnlyList<HierarchyReportRow> rows)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(rows);
 
         return
         [
-            .. report.Rows
+            .. rows
                 .GroupBy(row => string.IsNullOrWhiteSpace(row.JobTitle) ? "(No title)" : row.JobTitle)
                 .OrderByDescending(group => group.Count())
                 .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
@@ -67,7 +67,8 @@ internal static class ReportPresentationFormatter
         ];
     }
 
-    public static IReadOnlyList<KeyValuePair<string, int>> OrderCounts(
+    /// <inheritdoc />
+    public IReadOnlyList<KeyValuePair<string, int>> OrderCounts(
         IReadOnlyDictionary<string, int> counts)
     {
         ArgumentNullException.ThrowIfNull(counts);
@@ -80,7 +81,8 @@ internal static class ReportPresentationFormatter
         ];
     }
 
-    public static string FormatGradeCounts(IReadOnlyDictionary<string, int> gradeCounts)
+    /// <inheritdoc />
+    public string FormatGradeCounts(IReadOnlyDictionary<string, int> gradeCounts)
     {
         ArgumentNullException.ThrowIfNull(gradeCounts);
 
@@ -92,7 +94,8 @@ internal static class ReportPresentationFormatter
                 .Select(pair => $"{pair.Key}: {pair.Value.ToString(CultureInfo.InvariantCulture)}"));
     }
 
-    public static string BuildHierarchyDisplayName(HierarchyReportRow row)
+    /// <inheritdoc />
+    public string BuildHierarchyDisplayName(HierarchyReportRow row)
     {
         ArgumentNullException.ThrowIfNull(row);
 
@@ -111,25 +114,28 @@ internal static class ReportPresentationFormatter
         return builder.ToString();
     }
 
-    public static string BuildRecentHireSectionTitle(HierarchyReport report)
+    /// <inheritdoc />
+    public string BuildRecentHireSectionTitle(int recentHirePeriodDays)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(recentHirePeriodDays);
 
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"New Joiners (Last {report.RecentHirePeriodDays} Days)");
+            $"New Joiners (Last {recentHirePeriodDays} Days)");
     }
 
-    public static string BuildHolidaySectionTitle(HierarchyReport report)
+    /// <inheritdoc />
+    public string BuildHolidaySectionTitle(AvailabilityWindow availabilityWindow)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(availabilityWindow);
 
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"Holidays ({report.AvailabilityWindow.Start:yyyy-MM-dd} to {report.AvailabilityWindow.End:yyyy-MM-dd})");
+            $"Holidays ({availabilityWindow.Start:yyyy-MM-dd} to {availabilityWindow.End:yyyy-MM-dd})");
     }
 
-    public static string FormatAssociatedCountries(IReadOnlyList<string> associatedCountries)
+    /// <inheritdoc />
+    public string FormatAssociatedCountries(IReadOnlyList<string> associatedCountries)
     {
         ArgumentNullException.ThrowIfNull(associatedCountries);
 
@@ -138,7 +144,8 @@ internal static class ReportPresentationFormatter
             : string.Join(", ", associatedCountries);
     }
 
-    public static string FormatAge(DateOnly? dateOfBirth, DateOnly referenceDate)
+    /// <inheritdoc />
+    public string FormatAge(DateOnly? dateOfBirth, DateOnly referenceDate)
     {
         if (dateOfBirth is null)
         {
@@ -154,7 +161,8 @@ internal static class ReportPresentationFormatter
         return age.ToString(CultureInfo.InvariantCulture);
     }
 
-    public static string FormatDaysWithUs(DateOnly? employmentStartDate, DateOnly referenceDate)
+    /// <inheritdoc />
+    public string FormatDaysWithUs(DateOnly? employmentStartDate, DateOnly referenceDate)
     {
         if (employmentStartDate is null)
         {

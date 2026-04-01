@@ -9,110 +9,104 @@ public sealed class HierarchyReport
     /// Creates hierarchy report.
     /// </summary>
     public HierarchyReport(
-        DateTimeOffset generatedAt,
-        AvailabilityWindow availabilityWindow,
-        string rootEmployeeName,
-        HierarchyRelationshipField relationshipField,
-        IReadOnlyList<HolidayReportItem> holidays,
-        IReadOnlyList<HierarchyReportRow> rows,
-        IReadOnlyList<HierarchyReportRow> recentHires,
-        int recentHirePeriodDays,
-        IReadOnlyList<HierarchyTeam> teams,
-        IReadOnlyDictionary<string, int> locationCounts,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> countryCityCounts,
-        IReadOnlyDictionary<string, int> ageCounts,
-        IReadOnlyDictionary<string, int> tenureCounts)
+        HierarchyReportOverview overview,
+        HierarchyReportHierarchy hierarchy,
+        HierarchyReportSummaries summaries,
+        HierarchyReportDistributions distributions)
     {
-        ArgumentNullException.ThrowIfNull(availabilityWindow);
-        ArgumentException.ThrowIfNullOrWhiteSpace(rootEmployeeName);
-        ArgumentNullException.ThrowIfNull(relationshipField);
-        ArgumentNullException.ThrowIfNull(holidays);
-        ArgumentNullException.ThrowIfNull(rows);
-        ArgumentNullException.ThrowIfNull(recentHires);
-        ArgumentNullException.ThrowIfNull(teams);
-        ArgumentNullException.ThrowIfNull(locationCounts);
-        ArgumentNullException.ThrowIfNull(countryCityCounts);
-        ArgumentNullException.ThrowIfNull(ageCounts);
-        ArgumentNullException.ThrowIfNull(tenureCounts);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(recentHirePeriodDays);
+        ArgumentNullException.ThrowIfNull(overview);
+        ArgumentNullException.ThrowIfNull(hierarchy);
+        ArgumentNullException.ThrowIfNull(summaries);
+        ArgumentNullException.ThrowIfNull(distributions);
 
-        GeneratedAt = generatedAt;
-        AvailabilityWindow = availabilityWindow;
-        RootEmployeeName = rootEmployeeName;
-        RelationshipField = relationshipField;
-        Holidays = holidays;
-        Rows = rows;
-        RecentHires = recentHires;
-        RecentHirePeriodDays = recentHirePeriodDays;
-        Teams = teams;
-        LocationCounts = locationCounts;
-        CountryCityCounts = countryCityCounts;
-        AgeCounts = ageCounts;
-        TenureCounts = tenureCounts;
+        Overview = overview;
+        Hierarchy = hierarchy;
+        Summaries = summaries;
+        Distributions = distributions;
     }
+
+    /// <summary>
+    /// Gets report overview.
+    /// </summary>
+    public HierarchyReportOverview Overview { get; }
+
+    /// <summary>
+    /// Gets hierarchy rows and holidays.
+    /// </summary>
+    public HierarchyReportHierarchy Hierarchy { get; }
+
+    /// <summary>
+    /// Gets summary highlights and teams.
+    /// </summary>
+    public HierarchyReportSummaries Summaries { get; }
+
+    /// <summary>
+    /// Gets people distributions.
+    /// </summary>
+    public HierarchyReportDistributions Distributions { get; }
 
     /// <summary>
     /// Gets report generation timestamp.
     /// </summary>
-    public DateTimeOffset GeneratedAt { get; }
+    public DateTimeOffset GeneratedAt => Overview.GeneratedAt;
 
     /// <summary>
     /// Gets report availability window.
     /// </summary>
-    public AvailabilityWindow AvailabilityWindow { get; }
+    public AvailabilityWindow AvailabilityWindow => Overview.AvailabilityWindow;
 
     /// <summary>
     /// Gets root employee display name.
     /// </summary>
-    public string RootEmployeeName { get; }
+    public string RootEmployeeName => Overview.RootEmployeeName;
 
     /// <summary>
     /// Gets hierarchy relationship field.
     /// </summary>
-    public HierarchyRelationshipField RelationshipField { get; }
+    public HierarchyRelationshipField RelationshipField => Overview.RelationshipField;
 
     /// <summary>
     /// Gets holidays returned by BambooHR for the availability window.
     /// </summary>
-    public IReadOnlyList<HolidayReportItem> Holidays { get; }
+    public IReadOnlyList<HolidayReportItem> Holidays => Hierarchy.Holidays;
 
     /// <summary>
     /// Gets flattened hierarchy rows.
     /// </summary>
-    public IReadOnlyList<HierarchyReportRow> Rows { get; }
+    public IReadOnlyList<HierarchyReportRow> Rows => Hierarchy.Rows;
 
     /// <summary>
     /// Gets employees whose employment start date falls within the configured recent-hire period.
     /// </summary>
-    public IReadOnlyList<HierarchyReportRow> RecentHires { get; }
+    public IReadOnlyList<HierarchyReportRow> RecentHires => Summaries.RecentHires;
 
     /// <summary>
     /// Gets the configured recent-hire period length in days.
     /// </summary>
-    public int RecentHirePeriodDays { get; }
+    public int RecentHirePeriodDays => Summaries.RecentHirePeriodDays;
 
     /// <summary>
     /// Gets manager-led teams built from leaf direct reports.
     /// </summary>
-    public IReadOnlyList<HierarchyTeam> Teams { get; }
+    public IReadOnlyList<HierarchyTeam> Teams => Summaries.Teams;
 
     /// <summary>
     /// Gets people counts grouped by location.
     /// </summary>
-    public IReadOnlyDictionary<string, int> LocationCounts { get; }
+    public IReadOnlyDictionary<string, int> LocationCounts => Distributions.LocationCounts;
 
     /// <summary>
     /// Gets city counts grouped by country.
     /// </summary>
-    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> CountryCityCounts { get; }
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> CountryCityCounts => Distributions.CountryCityCounts;
 
     /// <summary>
     /// Gets people counts grouped by age.
     /// </summary>
-    public IReadOnlyDictionary<string, int> AgeCounts { get; }
+    public IReadOnlyDictionary<string, int> AgeCounts => Distributions.AgeCounts;
 
     /// <summary>
     /// Gets people counts grouped by tenure.
     /// </summary>
-    public IReadOnlyDictionary<string, int> TenureCounts { get; }
+    public IReadOnlyDictionary<string, int> TenureCounts => Distributions.TenureCounts;
 }

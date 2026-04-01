@@ -22,40 +22,49 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         Color.Yellow
     ];
 
+    /// <summary>
+    /// Creates console report writer.
+    /// </summary>
+    public ConsoleReportWriter(IReportPresentationFormatter formatter)
+    {
+        ArgumentNullException.ThrowIfNull(formatter);
+        _formatter = formatter;
+    }
+
     /// <inheritdoc/>
     public void Render(HierarchyReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
 
         AnsiConsole.MarkupLine(
-            $"[bold]BambooHR hierarchy report[/] for [green]{Escape(report.RootEmployeeName)}[/]");
+            $"[bold]BambooHR hierarchy report[/] for [green]{Escape(report.Overview.RootEmployeeName)}[/]");
         AnsiConsole.MarkupLine(
-            $"Generated: [grey]{report.GeneratedAt:yyyy-MM-dd HH:mm:ss zzz}[/]");
+            $"Generated: [grey]{report.Overview.GeneratedAt:yyyy-MM-dd HH:mm:ss zzz}[/]");
         AnsiConsole.MarkupLine(
-            $"Availability window: [yellow]{report.AvailabilityWindow.Start:yyyy-MM-dd}[/] to [yellow]{report.AvailabilityWindow.End:yyyy-MM-dd}[/]");
-        var relationshipMode = report.RelationshipField.UsesEmployeeId
+            $"Availability window: [yellow]{report.Overview.AvailabilityWindow.Start:yyyy-MM-dd}[/] to [yellow]{report.Overview.AvailabilityWindow.End:yyyy-MM-dd}[/]");
+        var relationshipMode = report.Overview.RelationshipField.UsesEmployeeId
             ? "employee ID"
             : "employee name";
         AnsiConsole.MarkupLine(
-            $"Hierarchy link: [blue]{Escape(report.RelationshipField.DisplayName)}[/] ({relationshipMode})");
+            $"Hierarchy link: [blue]{Escape(report.Overview.RelationshipField.DisplayName)}[/] ({relationshipMode})");
         AnsiConsole.WriteLine();
-        WriteHolidays(report);
+        WriteHolidays(report.Overview.AvailabilityWindow, report.Hierarchy.Holidays);
         AnsiConsole.WriteLine();
 
-        var rootRow = report.Rows.Count == 0
+        var rootRow = report.Hierarchy.Rows.Count == 0
             ? throw new InvalidOperationException("Hierarchy report is empty.")
-            : report.Rows[0];
+            : report.Hierarchy.Rows[0];
         var tree = new Tree("[grey]Hierarchy[/]")
         {
             Guide = TreeGuide.Ascii
         };
-        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+        var referenceDate = DateOnly.FromDateTime(report.Overview.GeneratedAt.Date);
         var rootNode = tree.AddNode(FormatNode(rootRow, referenceDate));
 
         var nodeStack = new Stack<TreeNode>();
         nodeStack.Push(rootNode);
 
-        foreach (var row in report.Rows.Skip(1))
+        foreach (var row in report.Hierarchy.Rows.Skip(1))
         {
             while (nodeStack.Count > row.Level)
             {
@@ -69,51 +78,51 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
 
         AnsiConsole.Write(tree);
         AnsiConsole.WriteLine();
-        WriteRecentHires(report);
+        WriteRecentHires(report.Summaries, referenceDate);
         AnsiConsole.WriteLine();
-        WriteJobTitles(report);
+        WriteJobTitles(report.Hierarchy.Rows);
         AnsiConsole.WriteLine();
-        WriteTeams(report);
+        WriteTeams(report.Summaries.Teams);
         AnsiConsole.WriteLine();
-        WriteTeamSizeChart(report);
+        WriteTeamSizeChart(report.Summaries.Teams);
         AnsiConsole.WriteLine();
-        WriteTeamGradeCharts(report);
+        WriteTeamGradeCharts(report.Summaries.Teams);
         AnsiConsole.WriteLine();
-        WriteDistributionSection("Location Distribution", report.LocationCounts);
+        WriteDistributionSection("Location Distribution", report.Distributions.LocationCounts);
         AnsiConsole.WriteLine();
-        WriteCountryCityDistribution(report);
+        WriteCountryCityDistribution(report.Distributions.CountryCityCounts);
         AnsiConsole.WriteLine();
-        WriteDistributionSection("Age Distribution", report.AgeCounts);
+        WriteDistributionSection("Age Distribution", report.Distributions.AgeCounts);
         AnsiConsole.WriteLine();
-        WriteDistributionSection("Company Tenure Distribution", report.TenureCounts);
+        WriteDistributionSection("Company Tenure Distribution", report.Distributions.TenureCounts);
     }
 
-    private static string FormatUnavailability(
+    private string FormatUnavailability(
         IReadOnlyList<TimeOffEntry> entries,
         DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        var text = ReportPresentationFormatter.FormatAvailability(entries, referenceDate);
-        var color = ReportPresentationFormatter.GetAvailabilityState(entries, referenceDate) switch
+        var text = _formatter.FormatAvailability(entries, referenceDate);
+        var color = _formatter.GetAvailabilityState(entries, referenceDate) switch
         {
-            ReportPresentationFormatter.AvailabilityState.Available => "green",
-            ReportPresentationFormatter.AvailabilityState.Upcoming => "yellow",
-            ReportPresentationFormatter.AvailabilityState.UnavailableToday => "red",
+            ReportAvailabilityState.Available => "green",
+            ReportAvailabilityState.Upcoming => "yellow",
+            ReportAvailabilityState.UnavailableToday => "red",
             _ => throw new InvalidOperationException("Unknown availability state.")
         };
 
         return $"[{color}]{Escape(text)}[/]";
     }
 
-    private static string FormatNode(HierarchyReportRow row, DateOnly referenceDate)
+    private string FormatNode(HierarchyReportRow row, DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(row);
 
         var details = $"{row.EmployeeId} | {row.Department ?? "-"} | {row.JobTitle ?? "-"}";
         var location = $"{Environment.NewLine}[grey]Location: {Escape(row.Location ?? "-")}[/]";
         var birthDate =
-            $"{Environment.NewLine}[grey]Birth date: {FormatDate(row.DateOfBirth)} | Age: {Escape(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}[/]";
+            $"{Environment.NewLine}[grey]Birth date: {FormatDate(row.DateOfBirth)} | Age: {Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate))}[/]";
         var employmentStart = $"{Environment.NewLine}[grey]Employment start: {FormatDate(row.EmploymentStartDate)}[/]";
         var manager = row.ManagerName is null ? string.Empty : $"{Environment.NewLine}[grey]Reports to: {Escape(row.ManagerName)}[/]";
 
@@ -126,38 +135,36 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             + manager;
     }
 
-    private static void WriteJobTitles(HierarchyReport report)
+    private void WriteJobTitles(IReadOnlyList<HierarchyReportRow> rows)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(rows);
 
         var table = new Table().Border(TableBorder.Rounded);
         _ = table.AddColumn("Job Title");
         _ = table.AddColumn("People");
 
-        var groupedTitles = report.Rows
-            .GroupBy(row => string.IsNullOrWhiteSpace(row.JobTitle) ? "(No title)" : row.JobTitle)
-            .OrderByDescending(group => group.Count())
-            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var group in groupedTitles)
+        foreach (var group in _formatter.GetJobTitleCounts(rows))
         {
             _ = table.AddRow(
                 Escape(group.Key ?? "(No title)"),
-                group.Count().ToString(System.Globalization.CultureInfo.InvariantCulture));
+                group.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
         AnsiConsole.MarkupLine("[bold]Job Titles[/]");
         AnsiConsole.Write(table);
     }
 
-    private static void WriteHolidays(HierarchyReport report)
+    private void WriteHolidays(
+        AvailabilityWindow availabilityWindow,
+        IReadOnlyList<HolidayReportItem> holidays)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(availabilityWindow);
+        ArgumentNullException.ThrowIfNull(holidays);
 
         AnsiConsole.MarkupLine(
-            $"[bold]{Escape(ReportPresentationFormatter.BuildHolidaySectionTitle(report))}[/]");
+            $"[bold]{Escape(_formatter.BuildHolidaySectionTitle(availabilityWindow))}[/]");
 
-        if (report.Holidays.Count == 0)
+        if (holidays.Count == 0)
         {
             AnsiConsole.MarkupLine("[grey]No holidays found in the availability window.[/]");
             return;
@@ -169,25 +176,25 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("End");
         _ = table.AddColumn("Countries");
 
-        foreach (var holiday in report.Holidays)
+        foreach (var holiday in holidays)
         {
             _ = table.AddRow(
                 Escape(holiday.Name),
                 Escape(FormatDate(holiday.Start)),
                 Escape(FormatDate(holiday.End)),
-                Escape(ReportPresentationFormatter.FormatAssociatedCountries(holiday.AssociatedCountries)));
+                Escape(_formatter.FormatAssociatedCountries(holiday.AssociatedCountries)));
         }
 
         AnsiConsole.Write(table);
     }
 
-    private static void WriteTeams(HierarchyReport report)
+    private static void WriteTeams(IReadOnlyList<HierarchyTeam> teams)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(teams);
 
         AnsiConsole.MarkupLine("[bold]Teams[/]");
 
-        if (report.Teams.Count == 0)
+        if (teams.Count == 0)
         {
             AnsiConsole.MarkupLine("[grey]No teams found.[/]");
             return;
@@ -198,7 +205,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("People");
         _ = table.AddColumn("Leaf Members");
 
-        foreach (var team in report.Teams)
+        foreach (var team in teams)
         {
             _ = table.AddRow(
                 $"{Escape(team.ManagerDisplayName)}'s Team",
@@ -209,11 +216,11 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         AnsiConsole.Write(table);
     }
 
-    private static void WriteTeamSizeChart(HierarchyReport report)
+    private static void WriteTeamSizeChart(IReadOnlyList<HierarchyTeam> teams)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(teams);
 
-        if (report.Teams.Count == 0)
+        if (teams.Count == 0)
         {
             return;
         }
@@ -224,9 +231,9 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             .CenterLabel()
             .ShowValues();
 
-        for (var index = 0; index < report.Teams.Count; index++)
+        for (var index = 0; index < teams.Count; index++)
         {
-            var team = report.Teams[index];
+            var team = teams[index];
             _ = chart.AddItem(
                 $"{team.ManagerDisplayName}'s Team",
                 team.PeopleCount,
@@ -236,18 +243,18 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         AnsiConsole.Write(chart);
     }
 
-    private static void WriteTeamGradeCharts(HierarchyReport report)
+    private static void WriteTeamGradeCharts(IReadOnlyList<HierarchyTeam> teams)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(teams);
 
-        if (report.Teams.Count == 0)
+        if (teams.Count == 0)
         {
             return;
         }
 
         AnsiConsole.MarkupLine("[bold]Team Grade Distribution[/]");
 
-        foreach (var team in report.Teams)
+        foreach (var team in teams)
         {
             var chart = new BreakdownChart()
                 .Width(80)
@@ -336,18 +343,19 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         return chart;
     }
 
-    private static void WriteCountryCityDistribution(HierarchyReport report)
+    private static void WriteCountryCityDistribution(
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> countryCityCounts)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(countryCityCounts);
 
-        if (report.CountryCityCounts.Count == 0)
+        if (countryCityCounts.Count == 0)
         {
             return;
         }
 
         AnsiConsole.MarkupLine("[bold]Location Distribution By Country Cities[/]");
 
-        foreach (var country in report.CountryCityCounts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        foreach (var country in countryCityCounts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
         {
             var orderedCities = country.Value
                 .OrderByDescending(pair => pair.Value)
@@ -369,21 +377,22 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         }
     }
 
-    private static void WriteRecentHires(HierarchyReport report)
+    private void WriteRecentHires(
+        HierarchyReportSummaries summaries,
+        DateOnly referenceDate)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(summaries);
 
         AnsiConsole.MarkupLine(
-            $"[bold]{Escape(ReportPresentationFormatter.BuildRecentHireSectionTitle(report))}[/]");
+            $"[bold]{Escape(_formatter.BuildRecentHireSectionTitle(summaries.RecentHirePeriodDays))}[/]");
 
-        if (report.RecentHires.Count == 0)
+        if (summaries.RecentHires.Count == 0)
         {
             AnsiConsole.MarkupLine("[grey]No employees joined during the configured period.[/]");
             return;
         }
 
         var table = new Table().Border(TableBorder.Rounded);
-        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
         _ = table.AddColumn("Employee");
         _ = table.AddColumn("Department");
         _ = table.AddColumn("Job Title");
@@ -394,7 +403,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("Days With Us");
         _ = table.AddColumn("Manager");
 
-        foreach (var row in report.RecentHires)
+        foreach (var row in summaries.RecentHires)
         {
             _ = table.AddRow(
                 $"{Escape(row.DisplayName)} (#{row.EmployeeId})",
@@ -402,18 +411,20 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 Escape(row.JobTitle ?? "-"),
                 Escape(row.Location ?? "-"),
                 Escape(FormatDate(row.DateOfBirth)),
-                Escape(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate)),
+                Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate)),
                 Escape(FormatDate(row.EmploymentStartDate)),
-                Escape(ReportPresentationFormatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate)),
+                Escape(_formatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate)),
                 Escape(row.ManagerName ?? "-"));
         }
 
         AnsiConsole.Write(table);
     }
-    private static string FormatDate(DateOnly? date)
+    private string FormatDate(DateOnly? date)
     {
-        return ReportPresentationFormatter.FormatDate(date);
+        return _formatter.FormatDate(date);
     }
 
     private static string Escape(string value) => Markup.Escape(value);
+
+    private readonly IReportPresentationFormatter _formatter;
 }

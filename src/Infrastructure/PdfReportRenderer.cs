@@ -18,19 +18,11 @@ namespace Infrastructure;
 /// </summary>
 public sealed class PdfReportRenderer : IPdfReportRenderer
 {
-    private static readonly string DefaultOutputPath =
-        Path.Combine("reports", "bamboohr-hierarchy-report.pdf");
-
-    private readonly BambooHrOptions _options;
-    private readonly TimeProvider _timeProvider;
-    private readonly PdfReportFileStore _pdfReportFileStore;
-    private readonly PdfContentComposer _pdfContentComposer;
-
     /// <summary>
     /// Creates PDF renderer.
     /// </summary>
     public PdfReportRenderer(
-        BambooHrOptions options,
+        PdfReportOptions options,
         TimeProvider timeProvider,
         PdfReportFileStore pdfReportFileStore,
         PdfContentComposer pdfContentComposer)
@@ -51,13 +43,13 @@ public sealed class PdfReportRenderer : IPdfReportRenderer
     {
         ArgumentNullException.ThrowIfNull(report);
 
-        if (!_options.Pdf.Enabled)
+        if (!_options.Enabled)
         {
             return;
         }
 
         var outputPath = ReportOutputPathResolver.Resolve(
-            _options.Pdf.OutputPath,
+            _options.OutputPath,
             DefaultOutputPath,
             _timeProvider);
 
@@ -105,4 +97,12 @@ public sealed class PdfReportRenderer : IPdfReportRenderer
         _pdfReportFileStore.Save(outputPath, document);
         AnsiConsole.MarkupLine($"[grey]PDF report saved:[/] {Markup.Escape(outputPath)}");
     }
+
+    private static readonly string DefaultOutputPath =
+        Path.Combine("reports", "bamboohr-hierarchy-report.pdf");
+
+    private readonly PdfReportOptions _options;
+    private readonly TimeProvider _timeProvider;
+    private readonly PdfReportFileStore _pdfReportFileStore;
+    private readonly PdfContentComposer _pdfContentComposer;
 }

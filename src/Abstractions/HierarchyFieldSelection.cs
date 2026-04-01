@@ -1,0 +1,60 @@
+using Models;
+
+namespace Abstractions;
+
+/// <summary>
+/// Selected BambooHR fields required to build a hierarchy report.
+/// </summary>
+public sealed class HierarchyFieldSelection
+{
+    /// <summary>
+    /// Creates selected field set.
+    /// </summary>
+    public HierarchyFieldSelection(
+        HierarchyRelationshipField relationshipField,
+        BambooHrField? locationField,
+        BambooHrField? countryField,
+        BambooHrField? cityField,
+        BambooHrField? birthDateField,
+        BambooHrField? hireDateField)
+    {
+        ArgumentNullException.ThrowIfNull(relationshipField);
+
+        RelationshipField = relationshipField;
+        LocationField = locationField;
+        CountryField = countryField;
+        CityField = cityField;
+        BirthDateField = birthDateField;
+        HireDateField = hireDateField;
+    }
+
+    /// <summary>
+    /// Gets the field used to resolve hierarchy relationships.
+    /// </summary>
+    public HierarchyRelationshipField RelationshipField { get; }
+
+    /// <summary>
+    /// Gets the preferred location field when available.
+    /// </summary>
+    public BambooHrField? LocationField { get; }
+
+    /// <summary>
+    /// Gets the preferred country field when available.
+    /// </summary>
+    public BambooHrField? CountryField { get; }
+
+    /// <summary>
+    /// Gets the preferred city field when available.
+    /// </summary>
+    public BambooHrField? CityField { get; }
+
+    /// <summary>
+    /// Gets the preferred birth date field when available.
+    /// </summary>
+    public BambooHrField? BirthDateField { get; }
+
+    /// <summary>
+    /// Gets the preferred hire date field when available.
+    /// </summary>
+    public BambooHrField? HireDateField { get; }
+}

@@ -9,99 +9,38 @@ namespace Logic;
 /// </summary>
 public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 {
-    private static readonly (string RequestKey, string DisplayName)[] PreferredLocationFields =
-    [
-        ("location", "Location"),
-        ("office", "Office"),
-        ("workLocation", "Work Location")
-    ];
-
-    private static readonly (string RequestKey, string DisplayName)[] PreferredCountryFields =
-    [
-        ("country", "Country"),
-        ("countryName", "Country"),
-        ("workCountry", "Work Country")
-    ];
-
-    private static readonly (string RequestKey, string DisplayName)[] PreferredCityFields =
-    [
-        ("city", "City"),
-        ("workCity", "Work City"),
-        ("officeCity", "Office City")
-    ];
-
-    private static readonly (string RequestKey, string DisplayName)[] PreferredBirthDateFields =
-    [
-        ("dateOfBirth", "Date of Birth"),
-        ("birthDate", "Birth Date"),
-        ("birthday", "Birthday"),
-        ("dob", "Date of Birth")
-    ];
-
-    private static readonly (string RequestKey, string DisplayName)[] PreferredHireDateFields =
-    [
-        ("hireDate", "Hire Date"),
-        ("startDate", "Start Date"),
-        ("dateHired", "Date Hired"),
-        ("employmentStartDate", "Employment Start Date")
-    ];
-
-    private static readonly HierarchyRelationshipField[] PreferredManagerIdFields =
-    [
-        new("supervisorEId", "Supervisor EId", usesEmployeeId: true),
-        new("supervisorId", "Supervisor Id", usesEmployeeId: true),
-        new("managerId", "Manager Id", usesEmployeeId: true),
-        new("managerEId", "Manager EId", usesEmployeeId: true),
-        new("reportsToId", "Reports To Id", usesEmployeeId: true),
-        new("reportsToEId", "Reports To EId", usesEmployeeId: true)
-    ];
-
-    private static readonly HierarchyRelationshipField[] PreferredManagerNameFields =
-    [
-        new("reportsTo", "Reporting to", usesEmployeeId: false),
-        new("supervisor", "Supervisor", usesEmployeeId: false),
-        new("manager", "Manager", usesEmployeeId: false)
-    ];
-
-    private readonly IBambooHrClient _bambooHrClient;
-    private readonly BambooHrOptions _options;
-    private readonly ILoadingNotifier _loadingNotifier;
-    private readonly IAvailabilityWindowProvider _availabilityWindowProvider;
-    private readonly IEmployeeProfileDirectoryLoader _employeeProfileDirectoryLoader;
-    private readonly IHierarchyTopologyBuilder _hierarchyTopologyBuilder;
-    private readonly IEmployeeAvailabilityResolver _employeeAvailabilityResolver;
-    private readonly IHierarchyAnalytics _hierarchyAnalytics;
-    private readonly TimeProvider _timeProvider;
-
     /// <summary>
     /// Creates report builder.
     /// </summary>
     public HierarchyReportBuilder(
         IBambooHrClient bambooHrClient,
-        BambooHrOptions options,
+        HierarchyReportSettings settings,
         ILoadingNotifier loadingNotifier,
         IAvailabilityWindowProvider availabilityWindowProvider,
         IEmployeeProfileDirectoryLoader employeeProfileDirectoryLoader,
+        IHierarchyFieldResolver hierarchyFieldResolver,
         IHierarchyTopologyBuilder hierarchyTopologyBuilder,
         IEmployeeAvailabilityResolver employeeAvailabilityResolver,
         IHierarchyAnalytics hierarchyAnalytics,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(bambooHrClient);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(loadingNotifier);
         ArgumentNullException.ThrowIfNull(availabilityWindowProvider);
         ArgumentNullException.ThrowIfNull(employeeProfileDirectoryLoader);
+        ArgumentNullException.ThrowIfNull(hierarchyFieldResolver);
         ArgumentNullException.ThrowIfNull(hierarchyTopologyBuilder);
         ArgumentNullException.ThrowIfNull(employeeAvailabilityResolver);
         ArgumentNullException.ThrowIfNull(hierarchyAnalytics);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         _bambooHrClient = bambooHrClient;
-        _options = options;
+        _settings = settings;
         _loadingNotifier = loadingNotifier;
         _availabilityWindowProvider = availabilityWindowProvider;
         _employeeProfileDirectoryLoader = employeeProfileDirectoryLoader;
+        _hierarchyFieldResolver = hierarchyFieldResolver;
         _hierarchyTopologyBuilder = hierarchyTopologyBuilder;
         _employeeAvailabilityResolver = employeeAvailabilityResolver;
         _hierarchyAnalytics = hierarchyAnalytics;
@@ -114,29 +53,22 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         ct.ThrowIfCancellationRequested();
 
         var generatedAt = _timeProvider.GetLocalNow();
-        _loadingNotifier.SetStatus("Loading availability window and BambooHR field metadata...");
+        _loadingNotifier.SetStatus("Loading availability window and BambooHR field selection...");
         var availabilityWindow = _availabilityWindowProvider.GetAvailabilityWindow(generatedAt);
-        var fields = await _bambooHrClient.GetFieldsAsync(ct).ConfigureAwait(false);
-        _loadingNotifier.SetStatus("Resolving hierarchy relationship field...");
-        var relationshipField = await ResolveRelationshipFieldAsync(rootEmployeeId, ct)
+        var fieldSelection = await _hierarchyFieldResolver.ResolveAsync(rootEmployeeId, ct)
             .ConfigureAwait(false);
-        var locationField = FindField(fields, PreferredLocationFields);
-        var countryField = FindField(fields, PreferredCountryFields);
-        var cityField = FindField(fields, PreferredCityFields);
-        var birthDateField = FindField(fields, PreferredBirthDateFields);
-        var hireDateField = FindField(fields, PreferredHireDateFields);
 
         _loadingNotifier.SetStatus("Loading employee directory...");
         var employees = await _bambooHrClient.GetEmployeesAsync(ct).ConfigureAwait(false);
         _loadingNotifier.SetStatus($"Loading employee profiles (0/{employees.Count})...");
         var profiles = await _employeeProfileDirectoryLoader.LoadAsync(
                 employees,
-                relationshipField,
-                locationField,
-                countryField,
-                cityField,
-                birthDateField,
-                hireDateField,
+                fieldSelection.RelationshipField,
+                fieldSelection.LocationField,
+                fieldSelection.CountryField,
+                fieldSelection.CityField,
+                fieldSelection.BirthDateField,
+                fieldSelection.HireDateField,
                 ct)
             .ConfigureAwait(false);
         var profilesByEmployeeId = profiles.ToDictionary(
@@ -151,7 +83,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 
         var childrenByManager = _hierarchyTopologyBuilder.BuildChildrenByManager(
             profiles,
-            relationshipField);
+            fieldSelection.RelationshipField);
         var includedEmployeeIds = _hierarchyTopologyBuilder.CollectHierarchyEmployeeIds(
             rootEmployeeId,
             childrenByManager,
@@ -168,7 +100,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             .ConfigureAwait(false);
 
         var holidayCountryMappings = _employeeAvailabilityResolver.BuildHolidayCountryMappings(
-            _options.HolidayCountryMappings);
+            _settings.HolidayCountryMappings);
         var holidays = _employeeAvailabilityResolver.BuildHolidayEntries(
             whoIsOut,
             holidayCountryMappings);
@@ -191,7 +123,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         var recentHires = _hierarchyAnalytics.BuildRecentHires(
             rows,
             referenceDate,
-            _options.RecentHirePeriodDays);
+            _settings.RecentHirePeriodDays);
         var teams = _hierarchyAnalytics.BuildTeams(
             rows,
             profilesByEmployeeId,
@@ -208,146 +140,33 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             availabilityWindow.Start);
 
         return new HierarchyReport(
-            generatedAt,
-            availabilityWindow,
-            rootEmployee.DisplayName,
-            relationshipField,
-            holidays,
-            rows,
-            recentHires,
-            _options.RecentHirePeriodDays,
-            teams,
-            locationCounts,
-            countryCityCounts,
-            ageCounts,
-            tenureCounts);
+            new HierarchyReportOverview(
+                generatedAt,
+                availabilityWindow,
+                rootEmployee.DisplayName,
+                fieldSelection.RelationshipField),
+            new HierarchyReportHierarchy(
+                holidays,
+                rows),
+            new HierarchyReportSummaries(
+                recentHires,
+                _settings.RecentHirePeriodDays,
+                teams),
+            new HierarchyReportDistributions(
+                locationCounts,
+                countryCityCounts,
+                ageCounts,
+                tenureCounts));
     }
 
-    private async Task<HierarchyRelationshipField> ResolveRelationshipFieldAsync(
-        EmployeeId rootEmployeeId,
-        CancellationToken ct)
-    {
-        var probeCandidates = PreferredManagerIdFields
-            .Concat(PreferredManagerNameFields)
-            .ToArray();
-        var probeValues = await _bambooHrClient.GetEmployeeFieldsAsync(
-                rootEmployeeId,
-                [.. probeCandidates.Select(candidate => candidate.RequestKey)],
-                ct)
-            .ConfigureAwait(false);
-
-        foreach (var candidate in probeCandidates)
-        {
-            if (probeValues.Values.ContainsKey(candidate.RequestKey))
-            {
-                return candidate;
-            }
-        }
-
-        var fields = await _bambooHrClient.GetFieldsAsync(ct).ConfigureAwait(false);
-        var managerIdField = FindField(fields, PreferredManagerIdFields);
-        if (managerIdField is not null)
-        {
-            return managerIdField;
-        }
-
-        var managerNameField = FindField(fields, PreferredManagerNameFields);
-        if (managerNameField is not null)
-        {
-            return managerNameField;
-        }
-
-        throw new InvalidOperationException(
-            "No BambooHR manager relationship field could be resolved.");
-    }
-
-    private static HierarchyRelationshipField? FindField(
-        IEnumerable<BambooHrField> fields,
-        IReadOnlyCollection<HierarchyRelationshipField> candidates)
-    {
-        var fieldList = fields.ToArray();
-
-        foreach (var candidate in candidates)
-        {
-            var exact = fieldList.FirstOrDefault(field =>
-                string.Equals(
-                    Normalize(field.RequestKey),
-                    Normalize(candidate.RequestKey),
-                    StringComparison.Ordinal));
-            if (exact is not null)
-            {
-                return new HierarchyRelationshipField(
-                    exact.RequestKey,
-                    exact.Name,
-                    candidate.UsesEmployeeId);
-            }
-        }
-
-        foreach (var candidate in candidates)
-        {
-            var partial = fieldList.FirstOrDefault(field =>
-                Normalize(field.RequestKey).Contains(
-                    Normalize(candidate.RequestKey),
-                    StringComparison.Ordinal)
-                || Normalize(field.Name).Contains(
-                    Normalize(candidate.DisplayName),
-                    StringComparison.Ordinal));
-            if (partial is not null)
-            {
-                return new HierarchyRelationshipField(
-                    partial.RequestKey,
-                    partial.Name,
-                    candidate.UsesEmployeeId);
-            }
-        }
-
-        return null;
-    }
-
-    private static BambooHrField? FindField(
-        IEnumerable<BambooHrField> fields,
-        (string RequestKey, string DisplayName)[] candidates)
-    {
-        var fieldList = fields.ToArray();
-
-        foreach (var (requestKey, _) in candidates)
-        {
-            var exact = fieldList.FirstOrDefault(field =>
-                string.Equals(
-                    Normalize(field.RequestKey),
-                    Normalize(requestKey),
-                    StringComparison.Ordinal));
-            if (exact is not null)
-            {
-                return exact;
-            }
-        }
-
-        foreach (var (requestKey, displayName) in candidates)
-        {
-            var partial = fieldList.FirstOrDefault(field =>
-                Normalize(field.RequestKey).Contains(
-                    Normalize(requestKey),
-                    StringComparison.Ordinal)
-                || Normalize(field.Name).Contains(
-                    Normalize(displayName),
-                    StringComparison.Ordinal));
-            if (partial is not null)
-            {
-                return partial;
-            }
-        }
-
-        return null;
-    }
-
-    private static string Normalize(string value)
-    {
-        var buffer = value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToLowerInvariant)
-            .ToArray();
-
-        return new string(buffer);
-    }
+    private readonly IBambooHrClient _bambooHrClient;
+    private readonly HierarchyReportSettings _settings;
+    private readonly ILoadingNotifier _loadingNotifier;
+    private readonly IAvailabilityWindowProvider _availabilityWindowProvider;
+    private readonly IEmployeeProfileDirectoryLoader _employeeProfileDirectoryLoader;
+    private readonly IHierarchyFieldResolver _hierarchyFieldResolver;
+    private readonly IHierarchyTopologyBuilder _hierarchyTopologyBuilder;
+    private readonly IEmployeeAvailabilityResolver _employeeAvailabilityResolver;
+    private readonly IHierarchyAnalytics _hierarchyAnalytics;
+    private readonly TimeProvider _timeProvider;
 }

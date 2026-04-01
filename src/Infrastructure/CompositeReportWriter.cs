@@ -9,10 +9,6 @@ namespace Infrastructure;
 /// </summary>
 public sealed class CompositeReportWriter : IReportWriter
 {
-    private readonly IConsoleReportRenderer _consoleReportRenderer;
-    private readonly IHtmlReportRenderer _htmlReportRenderer;
-    private readonly IPdfReportRenderer _pdfReportRenderer;
-
     /// <summary>
     /// Creates report writer.
     /// </summary>
@@ -39,4 +35,8 @@ public sealed class CompositeReportWriter : IReportWriter
         _htmlReportRenderer.Render(report);
         _pdfReportRenderer.Render(report);
     }
+
+    private readonly IConsoleReportRenderer _consoleReportRenderer;
+    private readonly IHtmlReportRenderer _htmlReportRenderer;
+    private readonly IPdfReportRenderer _pdfReportRenderer;
 }

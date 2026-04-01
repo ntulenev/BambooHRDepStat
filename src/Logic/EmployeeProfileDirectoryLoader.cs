@@ -12,9 +12,6 @@ namespace Logic;
 /// </summary>
 public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLoader
 {
-    private readonly IBambooHrClient _bambooHrClient;
-    private readonly ILoadingNotifier _loadingNotifier;
-
     /// <summary>
     /// Creates employee profile loader.
     /// </summary>
@@ -169,4 +166,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
 
         return null;
     }
+
+    private readonly IBambooHrClient _bambooHrClient;
+    private readonly ILoadingNotifier _loadingNotifier;
 }

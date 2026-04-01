@@ -3,6 +3,8 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 
+using Abstractions;
+
 using Models;
 
 namespace Infrastructure;
@@ -12,91 +14,67 @@ namespace Infrastructure;
 /// </summary>
 public sealed class HtmlContentComposer
 {
-    private static readonly string[] TeamChartPalette =
-    [
-        "#7ad0a4",
-        "#6fa8ff",
-        "#f0a35e",
-        "#b98ae8",
-        "#f3cb67",
-        "#e486b4",
-        "#6fc9d9",
-        "#9fd38a"
-    ];
-
-    private static readonly Dictionary<string, string> PreferredGradeColors =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Junior"] = "#6fa8ff",
-            ["Middle"] = "#f3cb67",
-            ["Senior"] = "#f0a35e",
-            ["Lead"] = "#c6c6c6",
-            ["Team Lead"] = "#c6c6c6",
-            ["Tech Lead"] = "#7ad0a4",
-            ["Manager"] = "#e486b4",
-            ["Director"] = "#b98ae8",
-            ["Head"] = "#6fc9d9"
-        };
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    /// <summary>
+    /// Creates HTML content composer.
+    /// </summary>
+    public HtmlContentComposer(IReportPresentationFormatter formatter)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    private readonly int _instanceMarker = 1;
+        ArgumentNullException.ThrowIfNull(formatter);
+        _formatter = formatter;
+    }
 
     public string Compose(HierarchyReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
-        _ = _instanceMarker;
 
         var template = HtmlTemplateLoader.LoadHierarchyReportTemplate();
-        var jobTitleCounts = ReportPresentationFormatter.GetJobTitleCounts(report);
+        var jobTitleCounts = _formatter.GetJobTitleCounts(report.Hierarchy.Rows);
 
         return ApplyTemplate(
             template,
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["__ROOT_EMPLOYEE__"] = Encode(report.RootEmployeeName),
+                ["__ROOT_EMPLOYEE__"] = Encode(report.Overview.RootEmployeeName),
                 ["__GENERATED_AT__"] = Encode(
-                    report.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)),
+                    report.Overview.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture)),
                 ["__WORK_WEEK__"] = Encode(
-                    $"{report.AvailabilityWindow.Start:yyyy-MM-dd} to {report.AvailabilityWindow.End:yyyy-MM-dd}"),
+                    $"{report.Overview.AvailabilityWindow.Start:yyyy-MM-dd} to {report.Overview.AvailabilityWindow.End:yyyy-MM-dd}"),
                 ["__RELATIONSHIP__"] = Encode(
-                    $"{report.RelationshipField.DisplayName} ({(report.RelationshipField.UsesEmployeeId ? "employee ID" : "employee name")})"),
-                ["__TOTAL_PEOPLE__"] = report.Rows.Count.ToString(CultureInfo.InvariantCulture),
-                ["__TOTAL_TEAMS__"] = report.Teams.Count.ToString(CultureInfo.InvariantCulture),
-                ["__TOTAL_COUNTRIES__"] = report.LocationCounts.Count.ToString(CultureInfo.InvariantCulture),
+                    $"{report.Overview.RelationshipField.DisplayName} ({(report.Overview.RelationshipField.UsesEmployeeId ? "employee ID" : "employee name")})"),
+                ["__TOTAL_PEOPLE__"] = report.Hierarchy.Rows.Count.ToString(CultureInfo.InvariantCulture),
+                ["__TOTAL_TEAMS__"] = report.Summaries.Teams.Count.ToString(CultureInfo.InvariantCulture),
+                ["__TOTAL_COUNTRIES__"] = report.Distributions.LocationCounts.Count.ToString(CultureInfo.InvariantCulture),
                 ["__TOTAL_JOB_TITLES__"] = jobTitleCounts.Count.ToString(CultureInfo.InvariantCulture),
-                ["__TEAM_SIZE_JSON__"] = BuildTeamSizeChartJson(report.Teams),
-                ["__TEAM_GRADE_JSON__"] = BuildTeamGradeChartJson(report.Teams),
-                ["__HOLIDAY_TITLE__"] = Encode(ReportPresentationFormatter.BuildHolidaySectionTitle(report)),
-                ["__HOLIDAY_ROWS__"] = BuildHolidayRows(report),
-                ["__HIERARCHY_ROWS__"] = BuildHierarchyRows(report),
+                ["__TEAM_SIZE_JSON__"] = BuildTeamSizeChartJson(report.Summaries.Teams),
+                ["__TEAM_GRADE_JSON__"] = BuildTeamGradeChartJson(report.Summaries.Teams),
+                ["__HOLIDAY_TITLE__"] = Encode(_formatter.BuildHolidaySectionTitle(report.Overview.AvailabilityWindow)),
+                ["__HOLIDAY_ROWS__"] = BuildHolidayRows(report.Hierarchy.Holidays),
+                ["__HIERARCHY_ROWS__"] = BuildHierarchyRows(report.Hierarchy.Rows, report.Overview.GeneratedAt),
                 ["__JOB_TITLE_ROWS__"] = BuildCountTableRows(jobTitleCounts, "No job title data."),
-                ["__TEAM_CARDS__"] = BuildTeamCards(report.Teams),
-                ["__LOCATION_CARDS__"] = BuildDistributionCards(report.LocationCounts, warm: false),
-                ["__COUNTRY_CITY_SECTIONS__"] = BuildCountryCitySections(report.CountryCityCounts),
-                ["__AGE_CARDS__"] = BuildDistributionCards(report.AgeCounts, warm: true),
-                ["__TENURE_CARDS__"] = BuildDistributionCards(report.TenureCounts, warm: true),
+                ["__TEAM_CARDS__"] = BuildTeamCards(report.Summaries.Teams),
+                ["__LOCATION_CARDS__"] = BuildDistributionCards(report.Distributions.LocationCounts, warm: false),
+                ["__COUNTRY_CITY_SECTIONS__"] = BuildCountryCitySections(report.Distributions.CountryCityCounts),
+                ["__AGE_CARDS__"] = BuildDistributionCards(report.Distributions.AgeCounts, warm: true),
+                ["__TENURE_CARDS__"] = BuildDistributionCards(report.Distributions.TenureCounts, warm: true),
                 ["__RECENT_HIRE_TITLE__"] = Encode(
-                    ReportPresentationFormatter.BuildRecentHireSectionTitle(report)),
-                ["__RECENT_HIRE_ROWS__"] = BuildRecentHireRows(report)
+                    _formatter.BuildRecentHireSectionTitle(report.Summaries.RecentHirePeriodDays)),
+                ["__RECENT_HIRE_ROWS__"] = BuildRecentHireRows(report.Summaries.RecentHires, report.Overview.GeneratedAt)
             });
     }
 
-    private static string BuildHierarchyRows(HierarchyReport report)
+    private string BuildHierarchyRows(
+        IReadOnlyList<HierarchyReportRow> rows,
+        DateTimeOffset generatedAt)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(rows);
 
-        var rows = report.Rows;
         if (rows.Count == 0)
         {
             return """              <tr><td class="empty" colspan="9">No hierarchy data.</td></tr>""";
         }
 
         var html = new StringBuilder(rows.Count * 320);
-        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+        var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
 
         foreach (var row in rows)
         {
@@ -108,9 +86,9 @@ public sealed class HtmlContentComposer
                 <td>{Encode(row.Department ?? "-")}</td>
                 <td>{Encode(row.JobTitle ?? "-")}</td>
                 <td>{Encode(row.Location ?? "-")}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDate(row.DateOfBirth))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
+                <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
+                <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
+                <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>
                 <td>{Encode(row.ManagerName ?? "-")}</td>
                 <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries, referenceDate)}</td>
               </tr>");
@@ -139,43 +117,44 @@ public sealed class HtmlContentComposer
         return html.ToString();
     }
 
-    private static string BuildHolidayRows(HierarchyReport report)
+    private string BuildHolidayRows(IReadOnlyList<HolidayReportItem> holidays)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(holidays);
 
-        if (report.Holidays.Count == 0)
+        if (holidays.Count == 0)
         {
             return """              <tr><td class="empty" colspan="4">No holidays found in the availability window.</td></tr>""";
         }
 
-        var html = new StringBuilder(report.Holidays.Count * 140);
-        foreach (var holiday in report.Holidays)
+        var html = new StringBuilder(holidays.Count * 140);
+        foreach (var holiday in holidays)
         {
             _ = html.AppendLine(
                 CultureInfo.InvariantCulture,
                 $@"              <tr>
                 <td>{Encode(holiday.Name)}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDate(holiday.Start))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDate(holiday.End))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatAssociatedCountries(holiday.AssociatedCountries))}</td>
+                <td>{Encode(_formatter.FormatDate(holiday.Start))}</td>
+                <td>{Encode(_formatter.FormatDate(holiday.End))}</td>
+                <td>{Encode(_formatter.FormatAssociatedCountries(holiday.AssociatedCountries))}</td>
               </tr>");
         }
 
         return html.ToString();
     }
 
-    private static string BuildRecentHireRows(HierarchyReport report)
+    private string BuildRecentHireRows(
+        IReadOnlyList<HierarchyReportRow> rows,
+        DateTimeOffset generatedAt)
     {
-        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(rows);
 
-        var rows = report.RecentHires;
         if (rows.Count == 0)
         {
             return """              <tr><td class="empty" colspan="8">No employees joined during the configured period.</td></tr>""";
         }
 
         var html = new StringBuilder(rows.Count * 256);
-        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+        var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
 
         foreach (var row in rows)
         {
@@ -186,10 +165,10 @@ public sealed class HtmlContentComposer
                 <td>{Encode(row.Department ?? "-")}</td>
                 <td>{Encode(row.JobTitle ?? "-")}</td>
                 <td>{Encode(row.Location ?? "-")}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDate(row.DateOfBirth))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
-                <td>{Encode(ReportPresentationFormatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate))}</td>
+                <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
+                <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
+                <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>
+                <td>{Encode(_formatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate))}</td>
                 <td>{Encode(row.ManagerName ?? "-")}</td>
               </tr>");
         }
@@ -244,11 +223,11 @@ public sealed class HtmlContentComposer
                     $@"<span class=""chip"">{Encode(pair.Key)}: {pair.Value.ToString(CultureInfo.InvariantCulture)}</span>"));
     }
 
-    private static string BuildDistributionCards(
+    private string BuildDistributionCards(
         IReadOnlyDictionary<string, int> counts,
         bool warm)
     {
-        var orderedCounts = ReportPresentationFormatter.OrderCounts(counts);
+        var orderedCounts = _formatter.OrderCounts(counts);
         if (orderedCounts.Count == 0)
         {
             return """          <p class="empty">No data.</p>""";
@@ -277,7 +256,7 @@ public sealed class HtmlContentComposer
         return html.ToString();
     }
 
-    private static string BuildCountryCitySections(
+    private string BuildCountryCitySections(
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> countryCityCounts)
     {
         if (countryCityCounts.Count == 0)
@@ -289,7 +268,7 @@ public sealed class HtmlContentComposer
 
         foreach (var country in countryCityCounts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
         {
-            var orderedCities = ReportPresentationFormatter.OrderCounts(country.Value);
+            var orderedCities = _formatter.OrderCounts(country.Value);
             if (orderedCities.Count == 0)
             {
                 continue;
@@ -331,22 +310,22 @@ public sealed class HtmlContentComposer
         return Math.Max(8, (int)Math.Round(value * 100d / maxValue, MidpointRounding.AwayFromZero));
     }
 
-    private static string BuildAvailabilityMarkup(
+    private string BuildAvailabilityMarkup(
         IReadOnlyList<TimeOffEntry> entries,
         DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        var state = ReportPresentationFormatter.GetAvailabilityState(entries, referenceDate);
+        var state = _formatter.GetAvailabilityState(entries, referenceDate);
         var cssClass = state switch
         {
-            ReportPresentationFormatter.AvailabilityState.Available => "availability-available",
-            ReportPresentationFormatter.AvailabilityState.Upcoming => "availability-upcoming",
-            ReportPresentationFormatter.AvailabilityState.UnavailableToday => "availability-timeoff",
+            ReportAvailabilityState.Available => "availability-available",
+            ReportAvailabilityState.Upcoming => "availability-upcoming",
+            ReportAvailabilityState.UnavailableToday => "availability-timeoff",
             _ => throw new InvalidOperationException("Unknown availability state.")
         };
 
-        return $@"<span class=""availability {cssClass}"">{Encode(ReportPresentationFormatter.FormatAvailability(entries, referenceDate))}</span>";
+        return $@"<span class=""availability {cssClass}"">{Encode(_formatter.FormatAvailability(entries, referenceDate))}</span>";
     }
 
     private static string BuildTeamSizeChartJson(IReadOnlyList<HierarchyTeam> teams)
@@ -425,4 +404,37 @@ public sealed class HtmlContentComposer
     }
 
     private static string Encode(string value) => WebUtility.HtmlEncode(value);
+
+    private static readonly string[] TeamChartPalette =
+    [
+        "#7ad0a4",
+        "#6fa8ff",
+        "#f0a35e",
+        "#b98ae8",
+        "#f3cb67",
+        "#e486b4",
+        "#6fc9d9",
+        "#9fd38a"
+    ];
+
+    private static readonly Dictionary<string, string> PreferredGradeColors =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Junior"] = "#6fa8ff",
+            ["Middle"] = "#f3cb67",
+            ["Senior"] = "#f0a35e",
+            ["Lead"] = "#c6c6c6",
+            ["Team Lead"] = "#c6c6c6",
+            ["Tech Lead"] = "#7ad0a4",
+            ["Manager"] = "#e486b4",
+            ["Director"] = "#b98ae8",
+            ["Head"] = "#6fc9d9"
+        };
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private readonly IReportPresentationFormatter _formatter;
 }

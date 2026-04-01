@@ -9,18 +9,18 @@ namespace Logic;
 /// </summary>
 public sealed class AvailabilityWindowProvider : IAvailabilityWindowProvider
 {
-    private readonly BambooHrOptions _options;
-
-    public AvailabilityWindowProvider(BambooHrOptions options)
+    public AvailabilityWindowProvider(HierarchyReportSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        _options = options;
+        ArgumentNullException.ThrowIfNull(settings);
+        _settings = settings;
     }
 
     /// <inheritdoc/>
     public AvailabilityWindow GetAvailabilityWindow(DateTimeOffset currentDate)
     {
         var today = DateOnly.FromDateTime(currentDate.Date);
-        return new AvailabilityWindow(today, today.AddDays(_options.AvailabilityLookaheadDays));
+        return new AvailabilityWindow(today, today.AddDays(_settings.AvailabilityLookaheadDays));
     }
+
+    private readonly HierarchyReportSettings _settings;
 }

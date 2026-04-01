@@ -1,5 +1,6 @@
 using Abstractions;
 
+using BambooHR.Reporting.Configuration;
 using BambooHR.Reporting.Utility;
 
 using Infrastructure;
@@ -25,12 +26,23 @@ var builder = Host.CreateDefaultBuilder(args)
                 $"Configuration section '{BambooHrOptions.SectionName}' is missing.");
         options.Validate();
 
-        _ = services.AddSingleton(options);
+        _ = services.AddSingleton(new BambooHrConnectionSettings(
+            options.Organization,
+            options.Token));
+        _ = services.AddSingleton(new HierarchyReportSettings(
+            new EmployeeId(options.EmployeeId),
+            options.AvailabilityLookaheadDays,
+            options.RecentHirePeriodDays,
+            options.HolidayCountryMappings));
+        _ = services.AddSingleton(options.Html);
+        _ = services.AddSingleton(options.Pdf);
         _ = services.AddSingleton(TimeProvider.System);
         _ = services.AddSingleton<IApplication, Application>();
         _ = services.AddSingleton<ILoadingNotifier, ConsoleLoadingNotifier>();
         _ = services.AddSingleton<IAvailabilityWindowProvider, AvailabilityWindowProvider>();
         _ = services.AddSingleton<IEmployeeProfileDirectoryLoader, EmployeeProfileDirectoryLoader>();
+        _ = services.AddSingleton<IHierarchyFieldResolver, HierarchyFieldResolver>();
+        _ = services.AddSingleton<IReportPresentationFormatter, ReportPresentationFormatter>();
         _ = services.AddSingleton<IHierarchyTopologyBuilder, HierarchyTopologyBuilder>();
         _ = services.AddSingleton<IEmployeeAvailabilityResolver, EmployeeAvailabilityResolver>();
         _ = services.AddSingleton<IHierarchyAnalytics, HierarchyAnalytics>();

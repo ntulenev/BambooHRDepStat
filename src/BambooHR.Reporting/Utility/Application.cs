@@ -1,7 +1,5 @@
 using Abstractions;
 
-using Models;
-
 namespace BambooHR.Reporting.Utility;
 
 /// <summary>
@@ -9,11 +7,6 @@ namespace BambooHR.Reporting.Utility;
 /// </summary>
 public sealed class Application : IApplication
 {
-    private readonly IHierarchyReportBuilder _hierarchyReportBuilder;
-    private readonly ILoadingNotifier _loadingNotifier;
-    private readonly IReportWriter _reportWriter;
-    private readonly BambooHrOptions _options;
-
     /// <summary>
     /// Creates application.
     /// </summary>
@@ -21,17 +14,17 @@ public sealed class Application : IApplication
         IHierarchyReportBuilder hierarchyReportBuilder,
         ILoadingNotifier loadingNotifier,
         IReportWriter reportWriter,
-        BambooHrOptions options)
+        HierarchyReportSettings settings)
     {
         ArgumentNullException.ThrowIfNull(hierarchyReportBuilder);
         ArgumentNullException.ThrowIfNull(loadingNotifier);
         ArgumentNullException.ThrowIfNull(reportWriter);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
 
         _hierarchyReportBuilder = hierarchyReportBuilder;
         _loadingNotifier = loadingNotifier;
         _reportWriter = reportWriter;
-        _options = options;
+        _settings = settings;
     }
 
     /// <inheritdoc/>
@@ -43,10 +36,15 @@ public sealed class Application : IApplication
         var report = await _loadingNotifier.RunAsync(
                 "Connecting to BambooHR...",
                 async cancellationToken => await _hierarchyReportBuilder
-                    .BuildAsync(_options.RootEmployeeId, cancellationToken)
+                    .BuildAsync(_settings.RootEmployeeId, cancellationToken)
                     .ConfigureAwait(false),
                 ct)
             .ConfigureAwait(false);
         _reportWriter.Write(report);
     }
+
+    private readonly IHierarchyReportBuilder _hierarchyReportBuilder;
+    private readonly ILoadingNotifier _loadingNotifier;
+    private readonly IReportWriter _reportWriter;
+    private readonly HierarchyReportSettings _settings;
 }

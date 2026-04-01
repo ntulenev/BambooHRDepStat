@@ -15,29 +15,17 @@ namespace Infrastructure;
 /// </summary>
 public sealed class BambooHrClient : IBambooHrClient
 {
-    private static readonly TimeSpan[] RetryDelays =
-    [
-        TimeSpan.FromSeconds(2),
-        TimeSpan.FromSeconds(5),
-        TimeSpan.FromSeconds(8),
-        TimeSpan.FromSeconds(13)
-    ];
-
-    private readonly HttpClient _httpClient;
-
     /// <summary>
     /// Creates configured BambooHR client.
     /// </summary>
-    public BambooHrClient(HttpClient httpClient, BambooHrOptions options)
+    public BambooHrClient(HttpClient httpClient, BambooHrConnectionSettings settings)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(options);
-
-        options.Validate();
+        ArgumentNullException.ThrowIfNull(settings);
 
         _httpClient = httpClient;
         _httpClient.BaseAddress ??= new Uri(
-            $"https://{options.Organization}.bamboohr.com",
+            $"https://{settings.Organization}.bamboohr.com",
             UriKind.Absolute);
 
         if (_httpClient.DefaultRequestHeaders.Accept.All(
@@ -52,7 +40,7 @@ public sealed class BambooHrClient : IBambooHrClient
 
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic",
-            Convert.ToBase64String(Encoding.ASCII.GetBytes($"{options.Token}:x")));
+            Convert.ToBase64String(Encoding.ASCII.GetBytes($"{settings.Token}:x")));
     }
 
     /// <inheritdoc/>
@@ -284,4 +272,14 @@ public sealed class BambooHrClient : IBambooHrClient
             or HttpStatusCode.BadGateway
             or HttpStatusCode.GatewayTimeout;
     }
+
+    private static readonly TimeSpan[] RetryDelays =
+    [
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(13)
+    ];
+
+    private readonly HttpClient _httpClient;
 }

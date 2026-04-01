@@ -11,20 +11,11 @@ namespace Infrastructure;
 /// </summary>
 public sealed class HtmlReportRenderer : IHtmlReportRenderer
 {
-    private static readonly string DefaultOutputPath =
-        Path.Combine("reports", "bamboohr-hierarchy-report.html");
-
-    private readonly BambooHrOptions _options;
-    private readonly TimeProvider _timeProvider;
-    private readonly HtmlReportFileStore _htmlReportFileStore;
-    private readonly HtmlContentComposer _htmlContentComposer;
-    private readonly HtmlReportLauncher _htmlReportLauncher;
-
     /// <summary>
     /// Creates HTML renderer.
     /// </summary>
     public HtmlReportRenderer(
-        BambooHrOptions options,
+        HtmlReportOptions options,
         TimeProvider timeProvider,
         HtmlReportFileStore htmlReportFileStore,
         HtmlContentComposer htmlContentComposer,
@@ -48,13 +39,13 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
     {
         ArgumentNullException.ThrowIfNull(report);
 
-        if (!_options.Html.Enabled)
+        if (!_options.Enabled)
         {
             return;
         }
 
         var outputPath = ReportOutputPathResolver.Resolve(
-            _options.Html.OutputPath,
+            _options.OutputPath,
             DefaultOutputPath,
             _timeProvider);
         var html = _htmlContentComposer.Compose(report);
@@ -62,7 +53,7 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
         _htmlReportFileStore.Save(outputPath, html);
         AnsiConsole.MarkupLine($"[grey]HTML report saved:[/] {Markup.Escape(outputPath)}");
 
-        if (!_options.Html.OpenInBrowser)
+        if (!_options.OpenInBrowser)
         {
             return;
         }
@@ -70,4 +61,13 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
         _htmlReportLauncher.Open(outputPath);
         AnsiConsole.MarkupLine("[grey]HTML report opened in default browser.[/]");
     }
+
+    private static readonly string DefaultOutputPath =
+        Path.Combine("reports", "bamboohr-hierarchy-report.html");
+
+    private readonly HtmlReportOptions _options;
+    private readonly TimeProvider _timeProvider;
+    private readonly HtmlReportFileStore _htmlReportFileStore;
+    private readonly HtmlContentComposer _htmlContentComposer;
+    private readonly HtmlReportLauncher _htmlReportLauncher;
 }
