@@ -32,7 +32,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         AnsiConsole.MarkupLine(
             $"Generated: [grey]{report.GeneratedAt:yyyy-MM-dd HH:mm:ss zzz}[/]");
         AnsiConsole.MarkupLine(
-            $"Work week: [yellow]{report.WorkWeek.Start:yyyy-MM-dd}[/] to [yellow]{report.WorkWeek.End:yyyy-MM-dd}[/]");
+            $"Availability window: [yellow]{report.WorkWeek.Start:yyyy-MM-dd}[/] to [yellow]{report.WorkWeek.End:yyyy-MM-dd}[/]");
         var relationshipMode = report.RelationshipField.UsesEmployeeId
             ? "employee ID"
             : "employee name";
@@ -47,7 +47,8 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         {
             Guide = TreeGuide.Ascii
         };
-        var rootNode = tree.AddNode(FormatNode(rootRow));
+        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+        var rootNode = tree.AddNode(FormatNode(rootRow, referenceDate));
 
         var nodeStack = new Stack<TreeNode>();
         nodeStack.Push(rootNode);
@@ -60,7 +61,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             }
 
             var parentNode = nodeStack.Peek();
-            var childNode = parentNode.AddNode(FormatNode(row));
+            var childNode = parentNode.AddNode(FormatNode(row, referenceDate));
             nodeStack.Push(childNode);
         }
 
@@ -96,13 +97,14 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 entries.Select(FormatEntry));
     }
 
-    private static string FormatNode(HierarchyReportRow row)
+    private static string FormatNode(HierarchyReportRow row, DateOnly referenceDate)
     {
         ArgumentNullException.ThrowIfNull(row);
 
         var details = $"{row.EmployeeId} | {row.Department ?? "-"} | {row.JobTitle ?? "-"}";
         var location = $"{Environment.NewLine}[grey]Location: {Escape(row.Location ?? "-")}[/]";
-        var birthDate = $"{Environment.NewLine}[grey]Birth date: {FormatDate(row.DateOfBirth)}[/]";
+        var birthDate =
+            $"{Environment.NewLine}[grey]Birth date: {FormatDate(row.DateOfBirth)} | Age: {Escape(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}[/]";
         var employmentStart = $"{Environment.NewLine}[grey]Employment start: {FormatDate(row.EmploymentStartDate)}[/]";
         var manager = row.ManagerName is null ? string.Empty : $"{Environment.NewLine}[grey]Reports to: {Escape(row.ManagerName)}[/]";
 
@@ -347,6 +349,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("Job Title");
         _ = table.AddColumn("Location");
         _ = table.AddColumn("Birth Date");
+        _ = table.AddColumn("Age");
         _ = table.AddColumn("Employment Start");
         _ = table.AddColumn("Days With Us");
         _ = table.AddColumn("Manager");
@@ -359,6 +362,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 Escape(row.JobTitle ?? "-"),
                 Escape(row.Location ?? "-"),
                 Escape(FormatDate(row.DateOfBirth)),
+                Escape(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate)),
                 Escape(FormatDate(row.EmploymentStartDate)),
                 Escape(ReportPresentationFormatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate)),
                 Escape(row.ManagerName ?? "-"));

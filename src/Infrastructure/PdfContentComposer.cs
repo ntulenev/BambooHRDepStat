@@ -88,12 +88,15 @@ public sealed class PdfContentComposer
         {
             content.Table(table =>
             {
+                var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+
                 table.ColumnsDefinition(columns =>
                 {
                     columns.RelativeColumn(2.4f);
                     columns.RelativeColumn(1.4f);
                     columns.RelativeColumn(1.4f);
                     columns.RelativeColumn(1.5f);
+                    columns.RelativeColumn(0.75f);
                     columns.RelativeColumn(1f);
                     columns.RelativeColumn(1f);
                     columns.RelativeColumn(1.2f);
@@ -107,6 +110,7 @@ public sealed class PdfContentComposer
                     ComposeHeaderCell(header.Cell(), "Job Title");
                     ComposeHeaderCell(header.Cell(), "Location");
                     ComposeHeaderCell(header.Cell(), "Birth");
+                    ComposeHeaderCell(header.Cell(), "Age");
                     ComposeHeaderCell(header.Cell(), "Start");
                     ComposeHeaderCell(header.Cell(), "Manager");
                     ComposeHeaderCell(header.Cell(), "Availability");
@@ -122,6 +126,7 @@ public sealed class PdfContentComposer
                     ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                     ComposeBodyCell(table.Cell(), row.Location ?? "-");
                     ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.DateOfBirth));
+                    ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate));
                     ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.EmploymentStartDate));
                     ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
                     ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatAvailability(row.UnavailabilityEntries));
@@ -294,6 +299,7 @@ public sealed class PdfContentComposer
                         columns.RelativeColumn(1.5f);
                         columns.RelativeColumn(1.3f);
                         columns.RelativeColumn(0.95f);
+                        columns.RelativeColumn(0.75f);
                         columns.RelativeColumn(0.95f);
                         columns.RelativeColumn(0.9f);
                         columns.RelativeColumn(1.2f);
@@ -306,6 +312,7 @@ public sealed class PdfContentComposer
                         ComposeHeaderCell(header.Cell(), "Job Title");
                         ComposeHeaderCell(header.Cell(), "Location");
                         ComposeHeaderCell(header.Cell(), "Birth");
+                        ComposeHeaderCell(header.Cell(), "Age");
                         ComposeHeaderCell(header.Cell(), "Start");
                         ComposeHeaderCell(header.Cell(), "Days With Us");
                         ComposeHeaderCell(header.Cell(), "Manager");
@@ -320,6 +327,7 @@ public sealed class PdfContentComposer
                         ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                         ComposeBodyCell(table.Cell(), row.Location ?? "-");
                         ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.DateOfBirth));
+                        ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate));
                         ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.EmploymentStartDate));
                         ComposeBodyCell(
                             table.Cell(),

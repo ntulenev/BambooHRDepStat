@@ -1,12 +1,12 @@
 namespace Models;
 
 /// <summary>
-/// Monday-Friday work week.
+/// Inclusive report date range used for availability and summary calculations.
 /// </summary>
 public sealed class WorkWeek
 {
     /// <summary>
-    /// Creates work week range.
+    /// Creates report date range.
     /// </summary>
     public WorkWeek(DateOnly start, DateOnly end)
     {
@@ -14,7 +14,7 @@ public sealed class WorkWeek
         {
             throw new ArgumentOutOfRangeException(
                 nameof(end),
-                "Work week end date must be on or after the start date.");
+                "Range end date must be on or after the start date.");
         }
 
         Start = start;
@@ -22,12 +22,12 @@ public sealed class WorkWeek
     }
 
     /// <summary>
-    /// Gets week start date.
+    /// Gets range start date.
     /// </summary>
     public DateOnly Start { get; }
 
     /// <summary>
-    /// Gets week end date.
+    /// Gets range end date.
     /// </summary>
     public DateOnly End { get; }
 }

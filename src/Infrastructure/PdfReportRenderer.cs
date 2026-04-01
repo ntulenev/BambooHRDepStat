@@ -83,7 +83,7 @@ public sealed class PdfReportRenderer : IPdfReportRenderer
                     _ = column.Item().Text(
                         string.Create(
                             CultureInfo.InvariantCulture,
-                            $"Work week: {report.WorkWeek.Start:yyyy-MM-dd} to {report.WorkWeek.End:yyyy-MM-dd}"));
+                            $"Availability window: {report.WorkWeek.Start:yyyy-MM-dd} to {report.WorkWeek.End:yyyy-MM-dd}"));
                     _ = column.Item().Text(
                         $"Hierarchy link: {report.RelationshipField.DisplayName} ({(report.RelationshipField.UsesEmployeeId ? "employee ID" : "employee name")})");
                 });

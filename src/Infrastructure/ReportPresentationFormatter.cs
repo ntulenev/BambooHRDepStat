@@ -94,6 +94,22 @@ internal static class ReportPresentationFormatter
             $"New Joiners (Last {report.RecentHirePeriodDays} Days)");
     }
 
+    public static string FormatAge(DateOnly? dateOfBirth, DateOnly referenceDate)
+    {
+        if (dateOfBirth is null)
+        {
+            return "-";
+        }
+
+        var age = referenceDate.Year - dateOfBirth.Value.Year;
+        if (referenceDate < dateOfBirth.Value.AddYears(age))
+        {
+            age--;
+        }
+
+        return age.ToString(CultureInfo.InvariantCulture);
+    }
+
     public static string FormatDaysWithUs(DateOnly? employmentStartDate, DateOnly referenceDate)
     {
         if (employmentStartDate is null)

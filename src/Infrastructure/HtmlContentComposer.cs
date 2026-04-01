@@ -70,7 +70,7 @@ public sealed class HtmlContentComposer
                 ["__TOTAL_JOB_TITLES__"] = jobTitleCounts.Count.ToString(CultureInfo.InvariantCulture),
                 ["__TEAM_SIZE_JSON__"] = BuildTeamSizeChartJson(report.Teams),
                 ["__TEAM_GRADE_JSON__"] = BuildTeamGradeChartJson(report.Teams),
-                ["__HIERARCHY_ROWS__"] = BuildHierarchyRows(report.Rows),
+                ["__HIERARCHY_ROWS__"] = BuildHierarchyRows(report),
                 ["__JOB_TITLE_ROWS__"] = BuildCountTableRows(jobTitleCounts, "No job title data."),
                 ["__TEAM_CARDS__"] = BuildTeamCards(report.Teams),
                 ["__LOCATION_CARDS__"] = BuildDistributionCards(report.LocationCounts, warm: false),
@@ -83,14 +83,18 @@ public sealed class HtmlContentComposer
             });
     }
 
-    private static string BuildHierarchyRows(IReadOnlyList<HierarchyReportRow> rows)
+    private static string BuildHierarchyRows(HierarchyReport report)
     {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var rows = report.Rows;
         if (rows.Count == 0)
         {
-            return """              <tr><td class="empty" colspan="8">No hierarchy data.</td></tr>""";
+            return """              <tr><td class="empty" colspan="9">No hierarchy data.</td></tr>""";
         }
 
         var html = new StringBuilder(rows.Count * 320);
+        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
 
         foreach (var row in rows)
         {
@@ -103,6 +107,7 @@ public sealed class HtmlContentComposer
                 <td>{Encode(row.JobTitle ?? "-")}</td>
                 <td>{Encode(row.Location ?? "-")}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.DateOfBirth))}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
                 <td>{Encode(row.ManagerName ?? "-")}</td>
                 <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries)}</td>
@@ -155,6 +160,7 @@ public sealed class HtmlContentComposer
                 <td>{Encode(row.JobTitle ?? "-")}</td>
                 <td>{Encode(row.Location ?? "-")}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.DateOfBirth))}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
                 <td>{Encode(ReportPresentationFormatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate))}</td>
                 <td>{Encode(row.ManagerName ?? "-")}</td>

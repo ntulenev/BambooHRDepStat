@@ -54,7 +54,7 @@ public sealed class HierarchyReport
     public DateTimeOffset GeneratedAt { get; }
 
     /// <summary>
-    /// Gets report work week.
+    /// Gets report availability window.
     /// </summary>
     public WorkWeek WorkWeek { get; }
 

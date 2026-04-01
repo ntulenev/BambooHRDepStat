@@ -102,7 +102,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         ct.ThrowIfCancellationRequested();
 
         var generatedAt = _timeProvider.GetLocalNow();
-        _loadingNotifier.SetStatus("Loading work week and BambooHR field metadata...");
+        _loadingNotifier.SetStatus("Loading availability window and BambooHR field metadata...");
         var workWeek = _workWeekProvider.GetWorkWeek(generatedAt);
         var fields = await _bambooHrClient.GetFieldsAsync(ct).ConfigureAwait(false);
         _loadingNotifier.SetStatus("Resolving hierarchy relationship field...");
@@ -147,7 +147,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             .Select(id => profilesByEmployeeId[id])
             .ToArray();
 
-        _loadingNotifier.SetStatus("Loading who's out for the current work week...");
+        _loadingNotifier.SetStatus("Loading who's out for the availability window...");
         var whoIsOut = await _bambooHrClient.GetWhosOutAsync(
                 workWeek.Start,
                 workWeek.End,
