@@ -113,6 +113,8 @@ public sealed class HierarchyReportBuilderTests
         Assert.Equal(
             new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero),
             report.GeneratedAt);
+        var holiday = Assert.Single(report.Holidays);
+        Assert.Equal("Founders Day", holiday.Name);
         Assert.Empty(report.Rows[0].UnavailabilityEntries);
         _ = Assert.Single(report.Rows[1].UnavailabilityEntries);
         Assert.Equal("Alice Smith", report.RootEmployeeName);
@@ -386,7 +388,7 @@ public sealed class HierarchyReportBuilderTests
     }
 
     [Fact]
-    public async Task BuildAsyncAssignsCountrySpecificHolidayOnlyToMatchingEmployees()
+    public async Task BuildAsyncAppliesConfiguredHolidayCountriesToMatchingEmployees()
     {
         var client = new FakeBambooHrClient(
             [
@@ -436,12 +438,22 @@ public sealed class HierarchyReportBuilderTests
                     employeeId: null,
                     "Malta National Day",
                     new DateOnly(2026, 9, 21),
+                    new DateOnly(2026, 9, 21)),
+                new TimeOffEntry(
+                    501,
+                    TimeOffEntryType.Holiday,
+                    employeeId: null,
+                    "Malta National Day",
+                    new DateOnly(2026, 9, 21),
                     new DateOnly(2026, 9, 21))
             ]);
 
         var builder = new HierarchyReportBuilder(
             client,
-            CreateOptions(),
+            CreateOptions(holidayCountryMappings: new Dictionary<string, string[]>
+            {
+                ["Malta National Day"] = ["Malta"]
+            }),
             new NoOpLoadingNotifier(),
             new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 9, 21),
@@ -454,79 +466,21 @@ public sealed class HierarchyReportBuilderTests
         Assert.Empty(report.Rows.Single(row => row.EmployeeId == 3).UnavailabilityEntries);
 
         var maltaEmployeeEntries = report.Rows.Single(row => row.EmployeeId == 2).UnavailabilityEntries;
-        var holiday = Assert.Single(maltaEmployeeEntries);
-        Assert.Equal(TimeOffEntryType.Holiday, holiday.Type);
+        var employeeHoliday = Assert.Single(maltaEmployeeEntries);
+        Assert.Equal(TimeOffEntryType.Holiday, employeeHoliday.Type);
+        Assert.Equal("Malta National Day", employeeHoliday.Name);
+
+        var holiday = Assert.Single(report.Holidays);
         Assert.Equal("Malta National Day", holiday.Name);
-    }
-
-    [Fact]
-    public async Task BuildAsyncAssignsSharedHolidayToSingleCountryHierarchy()
-    {
-        var client = new FakeBambooHrClient(
-            [
-                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text"),
-                new BambooHrField("location", "Location", "location", "text"),
-                new BambooHrField("country", "Country", "country", "text"),
-                new BambooHrField("city", "City", "city", "text")
-            ],
-            [
-                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
-                new BasicEmployee(2, "Branko Borg", "Branko", "Borg", "Branko", "Engineer", "Active")
-            ],
-            new Dictionary<int, IReadOnlyDictionary<string, string?>>
-            {
-                [1] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["department"] = "Leadership",
-                    ["jobTitle"] = "Director",
-                    ["location"] = "Valletta, Malta",
-                    ["country"] = "Malta",
-                    ["city"] = "Valletta"
-                },
-                [2] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["department"] = "Engineering",
-                    ["jobTitle"] = "Engineer",
-                    ["reportsTo"] = "Alice Smith",
-                    ["location"] = "Sliema, Malta",
-                    ["country"] = "Malta",
-                    ["city"] = "Sliema"
-                }
-            },
-            [
-                new TimeOffEntry(
-                    700,
-                    TimeOffEntryType.Holiday,
-                    employeeId: null,
-                    "Republic Day",
-                    new DateOnly(2026, 12, 13),
-                    new DateOnly(2026, 12, 13))
-            ]);
-
-        var builder = new HierarchyReportBuilder(
-            client,
-            CreateOptions(),
-            new NoOpLoadingNotifier(),
-            new StubAvailabilityWindowProvider(new AvailabilityWindow(
-                new DateOnly(2026, 12, 14),
-                new DateOnly(2026, 12, 18))),
-            new FakeTimeProvider(new DateTimeOffset(2026, 12, 14, 8, 0, 0, TimeSpan.Zero)));
-
-        var report = await builder.BuildAsync(1, CancellationToken.None);
-
-        foreach (var row in report.Rows)
-        {
-            var holiday = Assert.Single(row.UnavailabilityEntries);
-            Assert.Equal(TimeOffEntryType.Holiday, holiday.Type);
-            Assert.Equal("Republic Day", holiday.Name);
-        }
+        Assert.Equal(["Malta"], holiday.AssociatedCountries);
     }
 
     private static BambooHrOptions CreateOptions(
         int recentHirePeriodDays = 30,
-        int availabilityLookaheadDays = 7)
+        int availabilityLookaheadDays = 7,
+        Dictionary<string, string[]>? holidayCountryMappings = null)
     {
-        return new BambooHrOptions
+        var options = new BambooHrOptions
         {
             Organization = "test",
             Token = "token",
@@ -534,6 +488,16 @@ public sealed class HierarchyReportBuilderTests
             RecentHirePeriodDays = recentHirePeriodDays,
             AvailabilityLookaheadDays = availabilityLookaheadDays
         };
+
+        if (holidayCountryMappings is not null)
+        {
+            foreach (var mapping in holidayCountryMappings)
+            {
+                options.HolidayCountryMappings[mapping.Key] = mapping.Value;
+            }
+        }
+
+        return options;
     }
 
     private sealed class FakeBambooHrClient : IBambooHrClient

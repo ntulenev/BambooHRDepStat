@@ -36,6 +36,11 @@ public sealed class BambooHrOptions
     public int RecentHirePeriodDays { get; set; } = 30;
 
     /// <summary>
+    /// Gets or sets explicit holiday to country mappings used for availability.
+    /// </summary>
+    public Dictionary<string, string[]> HolidayCountryMappings { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Gets or sets HTML report output options.
     /// </summary>
     public HtmlReportOptions Html { get; set; } = new();
@@ -77,6 +82,27 @@ public sealed class BambooHrOptions
         {
             throw new InvalidOperationException(
                 $"{SectionName}:RecentHirePeriodDays must be greater than zero.");
+        }
+
+        foreach (var mapping in HolidayCountryMappings)
+        {
+            if (string.IsNullOrWhiteSpace(mapping.Key))
+            {
+                throw new InvalidOperationException(
+                    $"{SectionName}:HolidayCountryMappings keys must be non-empty.");
+            }
+
+            if (mapping.Value is null)
+            {
+                throw new InvalidOperationException(
+                    $"{SectionName}:HolidayCountryMappings '{mapping.Key}' must contain a country array.");
+            }
+
+            if (mapping.Value.Any(country => string.IsNullOrWhiteSpace(country)))
+            {
+                throw new InvalidOperationException(
+                    $"{SectionName}:HolidayCountryMappings '{mapping.Key}' contains an empty country value.");
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ public sealed class HierarchyReport
         AvailabilityWindow availabilityWindow,
         string rootEmployeeName,
         HierarchyRelationshipField relationshipField,
+        IReadOnlyList<HolidayReportItem> holidays,
         IReadOnlyList<HierarchyReportRow> rows,
         IReadOnlyList<HierarchyReportRow> recentHires,
         int recentHirePeriodDays,
@@ -25,6 +26,7 @@ public sealed class HierarchyReport
         ArgumentNullException.ThrowIfNull(availabilityWindow);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootEmployeeName);
         ArgumentNullException.ThrowIfNull(relationshipField);
+        ArgumentNullException.ThrowIfNull(holidays);
         ArgumentNullException.ThrowIfNull(rows);
         ArgumentNullException.ThrowIfNull(recentHires);
         ArgumentNullException.ThrowIfNull(teams);
@@ -38,6 +40,7 @@ public sealed class HierarchyReport
         AvailabilityWindow = availabilityWindow;
         RootEmployeeName = rootEmployeeName;
         RelationshipField = relationshipField;
+        Holidays = holidays;
         Rows = rows;
         RecentHires = recentHires;
         RecentHirePeriodDays = recentHirePeriodDays;
@@ -67,6 +70,11 @@ public sealed class HierarchyReport
     /// Gets hierarchy relationship field.
     /// </summary>
     public HierarchyRelationshipField RelationshipField { get; }
+
+    /// <summary>
+    /// Gets holidays returned by BambooHR for the availability window.
+    /// </summary>
+    public IReadOnlyList<HolidayReportItem> Holidays { get; }
 
     /// <summary>
     /// Gets flattened hierarchy rows.

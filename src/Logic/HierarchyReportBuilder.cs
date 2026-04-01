@@ -154,9 +154,12 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                 ct)
             .ConfigureAwait(false);
 
+        var holidayCountryMappings = BuildHolidayCountryMappings(_options.HolidayCountryMappings);
+        var holidays = BuildHolidayEntries(whoIsOut, holidayCountryMappings);
         var employeeEntries = BuildEmployeeEntries(
             includedProfiles,
-            whoIsOut);
+            whoIsOut,
+            holidayCountryMappings);
 
         List<HierarchyReportRow> rows = [];
         _loadingNotifier.SetStatus("Building hierarchy report...");
@@ -183,6 +186,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             availabilityWindow,
             rootEmployee.DisplayName,
             relationshipField,
+            holidays,
             rows,
             recentHires,
             _options.RecentHirePeriodDays,
@@ -195,10 +199,12 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
 
     private static Dictionary<int, IReadOnlyList<TimeOffEntry>> BuildEmployeeEntries(
         EmployeeProfile[] includedProfiles,
-        IReadOnlyList<TimeOffEntry> whoIsOut)
+        IReadOnlyList<TimeOffEntry> whoIsOut,
+        Dictionary<string, IReadOnlyList<string>> holidayCountryMappings)
     {
         ArgumentNullException.ThrowIfNull(includedProfiles);
         ArgumentNullException.ThrowIfNull(whoIsOut);
+        ArgumentNullException.ThrowIfNull(holidayCountryMappings);
 
         var timeOffEntries = whoIsOut
             .Where(entry => entry.Type == TimeOffEntryType.TimeOff && entry.EmployeeId.HasValue)
@@ -212,15 +218,20 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                     .ToArray());
         var holidayEntries = whoIsOut
             .Where(entry => entry.Type == TimeOffEntryType.Holiday)
+            .Where(entry => holidayCountryMappings.ContainsKey(entry.Name))
+            .GroupBy(entry => new
+            {
+                entry.Name,
+                entry.Start,
+                entry.End
+            })
+            .Select(group => group
+                .OrderBy(entry => entry.Id)
+                .First())
             .OrderBy(entry => entry.Start)
             .ThenBy(entry => entry.End)
             .ThenBy(entry => entry.Id)
             .ToArray();
-        var distinctCountryCount = includedProfiles
-            .Select(ResolveCountryLabel)
-            .Where(country => !string.Equals(country, "Unknown", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Count();
         var entriesByEmployee = new Dictionary<int, IReadOnlyList<TimeOffEntry>>();
 
         foreach (var profile in includedProfiles)
@@ -232,11 +243,12 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                 employeeEntries.AddRange(personalEntries);
             }
 
+            var employeeCountry = ResolveCountryLabel(profile);
             employeeEntries.AddRange(
-                holidayEntries.Where(holiday => IsHolidayApplicable(
-                    profile,
+                holidayEntries.Where(holiday => IsHolidayApplicableToCountry(
                     holiday,
-                    distinctCountryCount)));
+                    employeeCountry,
+                    holidayCountryMappings)));
 
             entriesByEmployee[profile.EmployeeId] =
             [
@@ -248,6 +260,59 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         }
 
         return entriesByEmployee;
+    }
+
+    private static IReadOnlyList<HolidayReportItem> BuildHolidayEntries(
+        IReadOnlyList<TimeOffEntry> whoIsOut,
+        Dictionary<string, IReadOnlyList<string>> holidayCountryMappings)
+    {
+        ArgumentNullException.ThrowIfNull(whoIsOut);
+        ArgumentNullException.ThrowIfNull(holidayCountryMappings);
+
+        return
+        [
+            .. whoIsOut
+                .Where(entry => entry.Type == TimeOffEntryType.Holiday)
+                .GroupBy(entry => new
+                {
+                    entry.Name,
+                    entry.Start,
+                    entry.End
+                })
+                .Select(group => group
+                    .OrderBy(entry => entry.Id)
+                    .First())
+                .Select(entry => new HolidayReportItem(
+                    entry.Name,
+                    entry.Start,
+                    entry.End,
+                    holidayCountryMappings.TryGetValue(entry.Name, out var associatedCountries)
+                        ? associatedCountries
+                        : []))
+                .OrderBy(entry => entry.Start)
+                .ThenBy(entry => entry.End)
+                .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+        ];
+    }
+
+    private static Dictionary<string, IReadOnlyList<string>> BuildHolidayCountryMappings(
+        IReadOnlyDictionary<string, string[]> configuredMappings)
+    {
+        ArgumentNullException.ThrowIfNull(configuredMappings);
+
+        var mappings = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mapping in configuredMappings)
+        {
+            var countries = (mapping.Value ?? [])
+                .Where(country => !string.IsNullOrWhiteSpace(country))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(country => country, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            mappings[mapping.Key] = countries;
+        }
+
+        return mappings;
     }
 
     private static List<HierarchyTeam> BuildTeams(
@@ -1075,43 +1140,23 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             : null;
     }
 
-    private static bool IsHolidayApplicable(
-        EmployeeProfile profile,
+    private static bool IsHolidayApplicableToCountry(
         TimeOffEntry holiday,
-        int distinctCountryCount)
+        string employeeCountry,
+        Dictionary<string, IReadOnlyList<string>> holidayCountryMappings)
     {
-        ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(holiday);
+        ArgumentException.ThrowIfNullOrWhiteSpace(employeeCountry);
+        ArgumentNullException.ThrowIfNull(holidayCountryMappings);
 
-        if (distinctCountryCount <= 1)
-        {
-            return true;
-        }
-
-        var holidayName = Normalize(holiday.Name);
-        if (string.IsNullOrWhiteSpace(holidayName))
+        if (!holidayCountryMappings.TryGetValue(holiday.Name, out var countries)
+            || countries.Count == 0)
         {
             return false;
         }
 
-        var country = Normalize(ResolveCountryLabel(profile));
-        if (!string.IsNullOrWhiteSpace(country)
-            && !string.Equals(country, "unknown", StringComparison.OrdinalIgnoreCase)
-            && holidayName.Contains(country, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        var city = Normalize(ResolveCityLabel(profile) ?? string.Empty);
-        if (!string.IsNullOrWhiteSpace(city)
-            && holidayName.Contains(city, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        var location = Normalize(profile.Location ?? string.Empty);
-        return !string.IsNullOrWhiteSpace(location)
-            && holidayName.Contains(location, StringComparison.Ordinal);
+        return countries.Any(country =>
+            string.Equals(country, employeeCountry, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool TryParseLocation(

@@ -70,6 +70,8 @@ public sealed class HtmlContentComposer
                 ["__TOTAL_JOB_TITLES__"] = jobTitleCounts.Count.ToString(CultureInfo.InvariantCulture),
                 ["__TEAM_SIZE_JSON__"] = BuildTeamSizeChartJson(report.Teams),
                 ["__TEAM_GRADE_JSON__"] = BuildTeamGradeChartJson(report.Teams),
+                ["__HOLIDAY_TITLE__"] = Encode(ReportPresentationFormatter.BuildHolidaySectionTitle(report)),
+                ["__HOLIDAY_ROWS__"] = BuildHolidayRows(report),
                 ["__HIERARCHY_ROWS__"] = BuildHierarchyRows(report),
                 ["__JOB_TITLE_ROWS__"] = BuildCountTableRows(jobTitleCounts, "No job title data."),
                 ["__TEAM_CARDS__"] = BuildTeamCards(report.Teams),
@@ -132,6 +134,31 @@ public sealed class HtmlContentComposer
             _ = html.AppendLine(
                 CultureInfo.InvariantCulture,
                 $@"              <tr><td>{Encode(pair.Key)}</td><td>{pair.Value.ToString(CultureInfo.InvariantCulture)}</td></tr>");
+        }
+
+        return html.ToString();
+    }
+
+    private static string BuildHolidayRows(HierarchyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        if (report.Holidays.Count == 0)
+        {
+            return """              <tr><td class="empty" colspan="4">No holidays found in the availability window.</td></tr>""";
+        }
+
+        var html = new StringBuilder(report.Holidays.Count * 140);
+        foreach (var holiday in report.Holidays)
+        {
+            _ = html.AppendLine(
+                CultureInfo.InvariantCulture,
+                $@"              <tr>
+                <td>{Encode(holiday.Name)}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatDate(holiday.Start))}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatDate(holiday.End))}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatAssociatedCountries(holiday.AssociatedCountries))}</td>
+              </tr>");
         }
 
         return html.ToString();

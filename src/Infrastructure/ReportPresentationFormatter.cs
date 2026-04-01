@@ -120,6 +120,24 @@ internal static class ReportPresentationFormatter
             $"New Joiners (Last {report.RecentHirePeriodDays} Days)");
     }
 
+    public static string BuildHolidaySectionTitle(HierarchyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"Holidays ({report.AvailabilityWindow.Start:yyyy-MM-dd} to {report.AvailabilityWindow.End:yyyy-MM-dd})");
+    }
+
+    public static string FormatAssociatedCountries(IReadOnlyList<string> associatedCountries)
+    {
+        ArgumentNullException.ThrowIfNull(associatedCountries);
+
+        return associatedCountries.Count == 0
+            ? "-"
+            : string.Join(", ", associatedCountries);
+    }
+
     public static string FormatAge(DateOnly? dateOfBirth, DateOnly referenceDate)
     {
         if (dateOfBirth is null)

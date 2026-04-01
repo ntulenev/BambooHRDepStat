@@ -42,7 +42,9 @@ public sealed class PdfContentComposer
                 ReportPresentationFormatter.GetJobTitleCounts(report).Count.ToString(CultureInfo.InvariantCulture)));
         });
 
+        column.Item().Element(container => ComposeHolidaysSection(container, report));
         column.Item().Element(container => ComposeHierarchySection(container, report));
+        column.Item().Element(container => ComposeRecentHiresSection(container, report));
         column.Item().Element(container => ComposeJobTitlesSection(container, report));
         column.Item().Element(container => ComposeTeamsSection(container, report));
         column.Item().Element(container => ComposeDistributionSection(
@@ -58,7 +60,6 @@ public sealed class PdfContentComposer
             container,
             "Company Tenure Distribution",
             ReportPresentationFormatter.OrderCounts(report.TenureCounts)));
-        column.Item().Element(container => ComposeRecentHiresSection(container, report));
     }
 
     private static void ComposeStatCard(
@@ -137,6 +138,54 @@ public sealed class PdfContentComposer
                 }
             });
         });
+    }
+
+    private static void ComposeHolidaysSection(
+        IContainer container,
+        HierarchyReport report)
+    {
+        ComposeSection(
+            container,
+            ReportPresentationFormatter.BuildHolidaySectionTitle(report),
+            content =>
+            {
+                if (report.Holidays.Count == 0)
+                {
+                    _ = content.Text("No holidays found in the availability window.")
+                        .Italic()
+                        .FontColor("#6B7467");
+                    return;
+                }
+
+                content.Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(2f);
+                        columns.RelativeColumn(1f);
+                        columns.RelativeColumn(1f);
+                        columns.RelativeColumn(1.5f);
+                    });
+
+                    table.Header(header =>
+                    {
+                        ComposeHeaderCell(header.Cell(), "Holiday");
+                        ComposeHeaderCell(header.Cell(), "Start");
+                        ComposeHeaderCell(header.Cell(), "End");
+                        ComposeHeaderCell(header.Cell(), "Countries");
+                    });
+
+                    foreach (var holiday in report.Holidays)
+                    {
+                        ComposeBodyCell(table.Cell(), holiday.Name);
+                        ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(holiday.Start));
+                        ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(holiday.End));
+                        ComposeBodyCell(
+                            table.Cell(),
+                            ReportPresentationFormatter.FormatAssociatedCountries(holiday.AssociatedCountries));
+                    }
+                });
+            });
     }
 
     private static void ComposeJobTitlesSection(

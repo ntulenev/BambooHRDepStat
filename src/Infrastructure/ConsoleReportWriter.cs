@@ -39,6 +39,8 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         AnsiConsole.MarkupLine(
             $"Hierarchy link: [blue]{Escape(report.RelationshipField.DisplayName)}[/] ({relationshipMode})");
         AnsiConsole.WriteLine();
+        WriteHolidays(report);
+        AnsiConsole.WriteLine();
 
         var rootRow = report.Rows.Count == 0
             ? throw new InvalidOperationException("Hierarchy report is empty.")
@@ -67,6 +69,8 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
 
         AnsiConsole.Write(tree);
         AnsiConsole.WriteLine();
+        WriteRecentHires(report);
+        AnsiConsole.WriteLine();
         WriteJobTitles(report);
         AnsiConsole.WriteLine();
         WriteTeams(report);
@@ -82,8 +86,6 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         WriteDistributionSection("Age Distribution", report.AgeCounts);
         AnsiConsole.WriteLine();
         WriteDistributionSection("Company Tenure Distribution", report.TenureCounts);
-        AnsiConsole.WriteLine();
-        WriteRecentHires(report);
     }
 
     private static string FormatUnavailability(
@@ -145,6 +147,37 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         }
 
         AnsiConsole.MarkupLine("[bold]Job Titles[/]");
+        AnsiConsole.Write(table);
+    }
+
+    private static void WriteHolidays(HierarchyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        AnsiConsole.MarkupLine(
+            $"[bold]{Escape(ReportPresentationFormatter.BuildHolidaySectionTitle(report))}[/]");
+
+        if (report.Holidays.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[grey]No holidays found in the availability window.[/]");
+            return;
+        }
+
+        var table = new Table().Border(TableBorder.Rounded);
+        _ = table.AddColumn("Holiday");
+        _ = table.AddColumn("Start");
+        _ = table.AddColumn("End");
+        _ = table.AddColumn("Countries");
+
+        foreach (var holiday in report.Holidays)
+        {
+            _ = table.AddRow(
+                Escape(holiday.Name),
+                Escape(FormatDate(holiday.Start)),
+                Escape(FormatDate(holiday.End)),
+                Escape(ReportPresentationFormatter.FormatAssociatedCountries(holiday.AssociatedCountries)));
+        }
+
         AnsiConsole.Write(table);
     }
 
