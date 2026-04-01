@@ -6,14 +6,16 @@ Console utility for building hierarchy-based BambooHR reports and exporting them
 
 The app starts from one root employee, loads that employee's reporting hierarchy from BambooHR, enriches people with profile data, and generates:
 
+- holidays table for the selected availability window
 - hierarchy tree with employee details
+- recent joiners table
 - team summaries
 - team size and grade distribution
 - location distribution
 - country to city breakdown
 - age distribution
 - company tenure distribution
-- availability for the current work week
+- availability for a configurable forward-looking window
 
 Output targets:
 
@@ -37,6 +39,9 @@ For each employee in the selected hierarchy, the report includes:
 
 Additional report sections:
 
+- `Holidays`
+- `Hierarchy`
+- `New Joiners`
 - `Job Titles`
 - `Teams`
   Team means a manager plus direct reports that do not have their own subordinates.
@@ -49,12 +54,27 @@ Additional report sections:
 
 ## Availability Rules
 
-Availability is built from BambooHR `Who's Out` data for the current work week.
+Availability is built from BambooHR `Who's Out` data for the configured window:
 
-Supported availability types:
+- start: today
+- end: today + `AvailabilityLookaheadDays`
 
-- personal time off
-- public holidays
+Availability status is resolved like this:
+
+- green `Available`: no matching unavailability entries
+- yellow `Upcoming: ...`: employee is available today, but has a future unavailability inside the configured window
+- red `Time off: ...` or `Holiday (...): ...`: employee is unavailable today
+
+Supported availability types in the employee row:
+
+- personal time off matched explicitly by `employeeId`
+- holidays only when they are explicitly mapped in config through `HolidayCountryMappings` and the employee country matches
+
+Holiday behavior:
+
+- all holidays returned by BambooHR for the window are shown in the separate `Holidays` section
+- the `Holidays` table also shows associated countries from config, if present
+- if a holiday has no configured country mapping, it is still shown in `Holidays`, but it is not added to employee `Availability`
 
 ## Configuration
 
@@ -67,7 +87,12 @@ Minimal config:
   "BambooHR": {
     "Organization": "your-company-subdomain",
     "Token": "your-api-token",
-    "EmployeeId": 42
+    "EmployeeId": 42,
+    "AvailabilityLookaheadDays": 7,
+    "RecentHirePeriodDays": 90,
+    "HolidayCountryMappings": {
+      "Good Friday": [ "Malta" ]
+    }
   }
 }
 ```
@@ -80,6 +105,12 @@ Full config with report options:
     "Organization": "your-company-subdomain",
     "Token": "your-api-token",
     "EmployeeId": 38,
+    "AvailabilityLookaheadDays": 7,
+    "RecentHirePeriodDays": 90,
+    "HolidayCountryMappings": {
+      "Good Friday": [ "Malta" ],
+      "Worker's Day": [ "Malta", "Greece" ]
+    },
     "Html": {
       "Enabled": true,
       "OpenInBrowser": true,
@@ -98,11 +129,21 @@ Configuration fields:
 - `Organization`: BambooHR subdomain
 - `Token`: BambooHR API token
 - `EmployeeId`: root employee id for the hierarchy
+- `AvailabilityLookaheadDays`: how many days ahead to include in the availability window, starting from today
+- `RecentHirePeriodDays`: how many days back to include in the `New Joiners` section
+- `HolidayCountryMappings`: explicit holiday-to-country associations used to add holidays into employee availability
 - `Html.Enabled`: enable or disable HTML generation
 - `Html.OpenInBrowser`: open generated HTML in the default browser
 - `Html.OutputPath`: base output path for HTML report
 - `Pdf.Enabled`: enable or disable PDF generation
 - `Pdf.OutputPath`: base output path for PDF report
+
+Example for gradually improving holiday mappings:
+
+1. Run the report.
+2. Check the `Holidays` section for entries that have no country association yet.
+3. Add the missing holiday name to `HolidayCountryMappings` in `appsettings.json`.
+4. Run the report again and verify that the holiday now appears in `Availability` for employees from the mapped countries.
 
 
 ## Output Files
