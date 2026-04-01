@@ -61,6 +61,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
     ];
 
     private readonly IBambooHrClient _bambooHrClient;
+    private readonly BambooHrOptions _options;
     private readonly ILoadingNotifier _loadingNotifier;
     private readonly IWorkWeekProvider _workWeekProvider;
     private readonly TimeProvider _timeProvider;
@@ -70,16 +71,19 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
     /// </summary>
     public HierarchyReportBuilder(
         IBambooHrClient bambooHrClient,
+        BambooHrOptions options,
         ILoadingNotifier loadingNotifier,
         IWorkWeekProvider workWeekProvider,
         TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(bambooHrClient);
+        ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(loadingNotifier);
         ArgumentNullException.ThrowIfNull(workWeekProvider);
         ArgumentNullException.ThrowIfNull(timeProvider);
 
         _bambooHrClient = bambooHrClient;
+        _options = options;
         _loadingNotifier = loadingNotifier;
         _workWeekProvider = workWeekProvider;
         _timeProvider = timeProvider;
@@ -161,6 +165,10 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             childrenByManager,
             employeeEntries,
             rows);
+        var recentHires = BuildRecentHires(
+            rows,
+            DateOnly.FromDateTime(generatedAt.Date),
+            _options.RecentHirePeriodDays);
         var teams = BuildTeams(rows, profilesByEmployeeId, childrenByManager);
         _loadingNotifier.SetStatus("Calculating distributions and summaries...");
         var locationCounts = BuildLocationCounts(includedProfiles);
@@ -174,6 +182,8 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             rootEmployee.DisplayName,
             relationshipField,
             rows,
+            recentHires,
+            _options.RecentHirePeriodDays,
             teams,
             locationCounts,
             countryCityCounts,
@@ -284,6 +294,31 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
         }
 
         return teams;
+    }
+
+    private static IReadOnlyList<HierarchyReportRow> BuildRecentHires(
+        IReadOnlyList<HierarchyReportRow> rows,
+        DateOnly referenceDate,
+        int recentHirePeriodDays)
+    {
+        var startDate = referenceDate.AddDays(-(recentHirePeriodDays - 1));
+
+        return
+        [
+            .. rows
+                .Where(row => row.EmploymentStartDate.HasValue)
+                .Select(row => new
+                {
+                    Row = row,
+                    EmploymentStartDate = row.EmploymentStartDate!.Value
+                })
+                .Where(item => item.EmploymentStartDate >= startDate)
+                .Where(item => item.EmploymentStartDate <= referenceDate)
+                .OrderByDescending(item => item.EmploymentStartDate)
+                .ThenBy(item => item.Row.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => item.Row.EmployeeId)
+                .Select(item => item.Row)
+        ];
     }
 
     private static Dictionary<string, int> BuildGradeCounts(

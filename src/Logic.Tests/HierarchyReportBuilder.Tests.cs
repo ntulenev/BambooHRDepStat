@@ -96,6 +96,7 @@ public sealed class HierarchyReportBuilderTests
 
         var builder = new HierarchyReportBuilder(
             client,
+            CreateOptions(),
             new NoOpLoadingNotifier(),
             new StubWorkWeekProvider(new WorkWeek(
                 new DateOnly(2026, 3, 16),
@@ -145,6 +146,107 @@ public sealed class HierarchyReportBuilderTests
                 Assert.Equal(1, team.GradeCounts["Engineer"]);
                 Assert.Equal(1, team.GradeCounts["Manager"]);
             });
+    }
+
+    [Fact]
+    public async Task BuildAsyncReturnsRecentHiresWithinConfiguredPeriodSortedByStartDate()
+    {
+        var client = new FakeBambooHrClient(
+            [
+                new BambooHrField("reportsTo", "Reports To", "reportsTo", "text"),
+                new BambooHrField("location", "Location", "location", "text"),
+                new BambooHrField("country", "Country", "country", "text"),
+                new BambooHrField("city", "City", "city", "text"),
+                new BambooHrField("dateOfBirth", "Date of Birth", "dateOfBirth", "date"),
+                new BambooHrField("hireDate", "Hire Date", "hireDate", "date")
+            ],
+            [
+                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(2, "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
+                new BasicEmployee(3, "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
+                new BasicEmployee(4, "Diana White", "Diana", "White", "Diana", "Engineer", "Active"),
+                new BasicEmployee(5, "Evan Black", "Evan", "Black", "Evan", "Engineer", "Active")
+            ],
+            new Dictionary<int, IReadOnlyDictionary<string, string?>>
+            {
+                [1] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Leadership",
+                    ["jobTitle"] = "Director",
+                    ["location"] = "Berlin, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Berlin",
+                    ["dateOfBirth"] = "1980-01-10",
+                    ["hireDate"] = "2012-02-01"
+                },
+                [2] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Manager",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Munich, Germany",
+                    ["country"] = "Germany",
+                    ["city"] = "Munich",
+                    ["dateOfBirth"] = "1990-03-12",
+                    ["hireDate"] = "2026-03-16"
+                },
+                [3] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Bob Jones",
+                    ["location"] = "London, United Kingdom",
+                    ["country"] = "United Kingdom",
+                    ["city"] = "London",
+                    ["dateOfBirth"] = "1998-06-01",
+                    ["hireDate"] = "2026-03-05"
+                },
+                [4] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Engineering",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Prague, Czechia",
+                    ["country"] = "Czechia",
+                    ["city"] = "Prague",
+                    ["dateOfBirth"] = "1995-07-20",
+                    ["hireDate"] = "2026-03-02"
+                },
+                [5] = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["department"] = "Operations",
+                    ["jobTitle"] = "Engineer",
+                    ["reportsTo"] = "Alice Smith",
+                    ["location"] = "Rome, Italy",
+                    ["country"] = "Italy",
+                    ["city"] = "Rome",
+                    ["dateOfBirth"] = "1991-11-11",
+                    ["hireDate"] = "2026-02-14"
+                }
+            },
+            []);
+
+        var builder = new HierarchyReportBuilder(
+            client,
+            CreateOptions(recentHirePeriodDays: 15),
+            new NoOpLoadingNotifier(),
+            new StubWorkWeekProvider(new WorkWeek(
+                new DateOnly(2026, 3, 16),
+                new DateOnly(2026, 3, 20))),
+            new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
+
+        var report = await builder.BuildAsync(1, CancellationToken.None);
+
+        Assert.Equal(15, report.RecentHirePeriodDays);
+        Assert.Equal(
+            ["Bob Jones", "Carol Brown", "Diana White"],
+            [.. report.RecentHires.Select(row => row.DisplayName)]);
+        Assert.Equal(
+            [new DateOnly(2026, 3, 16), new DateOnly(2026, 3, 5), new DateOnly(2026, 3, 2)],
+            [.. report.RecentHires.Select(row => row.EmploymentStartDate!.Value)]);
+        Assert.All(report.RecentHires, row => Assert.NotNull(row.ManagerName));
+        Assert.Equal("Alice Smith", report.RecentHires[0].ManagerName);
+        Assert.Equal("Bob Jones", report.RecentHires[1].ManagerName);
     }
 
     [Fact]
@@ -239,6 +341,7 @@ public sealed class HierarchyReportBuilderTests
 
         var builder = new HierarchyReportBuilder(
             client,
+            CreateOptions(),
             new NoOpLoadingNotifier(),
             new StubWorkWeekProvider(new WorkWeek(
                 new DateOnly(2026, 3, 16),
@@ -338,6 +441,7 @@ public sealed class HierarchyReportBuilderTests
 
         var builder = new HierarchyReportBuilder(
             client,
+            CreateOptions(),
             new NoOpLoadingNotifier(),
             new StubWorkWeekProvider(new WorkWeek(
                 new DateOnly(2026, 9, 21),
@@ -401,6 +505,7 @@ public sealed class HierarchyReportBuilderTests
 
         var builder = new HierarchyReportBuilder(
             client,
+            CreateOptions(),
             new NoOpLoadingNotifier(),
             new StubWorkWeekProvider(new WorkWeek(
                 new DateOnly(2026, 12, 14),
@@ -415,6 +520,17 @@ public sealed class HierarchyReportBuilderTests
             Assert.Equal(TimeOffEntryType.Holiday, holiday.Type);
             Assert.Equal("Republic Day", holiday.Name);
         }
+    }
+
+    private static BambooHrOptions CreateOptions(int recentHirePeriodDays = 30)
+    {
+        return new BambooHrOptions
+        {
+            Organization = "test",
+            Token = "token",
+            EmployeeId = 1,
+            RecentHirePeriodDays = recentHirePeriodDays
+        };
     }
 
     private sealed class FakeBambooHrClient : IBambooHrClient

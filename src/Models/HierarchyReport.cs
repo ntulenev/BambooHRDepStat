@@ -14,6 +14,8 @@ public sealed class HierarchyReport
         string rootEmployeeName,
         HierarchyRelationshipField relationshipField,
         IReadOnlyList<HierarchyReportRow> rows,
+        IReadOnlyList<HierarchyReportRow> recentHires,
+        int recentHirePeriodDays,
         IReadOnlyList<HierarchyTeam> teams,
         IReadOnlyDictionary<string, int> locationCounts,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> countryCityCounts,
@@ -24,17 +26,21 @@ public sealed class HierarchyReport
         ArgumentException.ThrowIfNullOrWhiteSpace(rootEmployeeName);
         ArgumentNullException.ThrowIfNull(relationshipField);
         ArgumentNullException.ThrowIfNull(rows);
+        ArgumentNullException.ThrowIfNull(recentHires);
         ArgumentNullException.ThrowIfNull(teams);
         ArgumentNullException.ThrowIfNull(locationCounts);
         ArgumentNullException.ThrowIfNull(countryCityCounts);
         ArgumentNullException.ThrowIfNull(ageCounts);
         ArgumentNullException.ThrowIfNull(tenureCounts);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(recentHirePeriodDays);
 
         GeneratedAt = generatedAt;
         WorkWeek = workWeek;
         RootEmployeeName = rootEmployeeName;
         RelationshipField = relationshipField;
         Rows = rows;
+        RecentHires = recentHires;
+        RecentHirePeriodDays = recentHirePeriodDays;
         Teams = teams;
         LocationCounts = locationCounts;
         CountryCityCounts = countryCityCounts;
@@ -66,6 +72,16 @@ public sealed class HierarchyReport
     /// Gets flattened hierarchy rows.
     /// </summary>
     public IReadOnlyList<HierarchyReportRow> Rows { get; }
+
+    /// <summary>
+    /// Gets employees whose employment start date falls within the configured recent-hire period.
+    /// </summary>
+    public IReadOnlyList<HierarchyReportRow> RecentHires { get; }
+
+    /// <summary>
+    /// Gets the configured recent-hire period length in days.
+    /// </summary>
+    public int RecentHirePeriodDays { get; }
 
     /// <summary>
     /// Gets manager-led teams built from leaf direct reports.

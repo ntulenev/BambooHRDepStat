@@ -26,6 +26,11 @@ public sealed class BambooHrOptions
     public int EmployeeId { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of days used to highlight recent hires in the report.
+    /// </summary>
+    public int RecentHirePeriodDays { get; set; } = 30;
+
+    /// <summary>
     /// Gets or sets HTML report output options.
     /// </summary>
     public HtmlReportOptions Html { get; set; } = new();
@@ -55,6 +60,12 @@ public sealed class BambooHrOptions
         {
             throw new InvalidOperationException(
                 $"{SectionName}:EmployeeId must be greater than zero.");
+        }
+
+        if (RecentHirePeriodDays <= 0)
+        {
+            throw new InvalidOperationException(
+                $"{SectionName}:RecentHirePeriodDays must be greater than zero.");
         }
     }
 }

@@ -58,6 +58,7 @@ public sealed class PdfContentComposer
             container,
             "Company Tenure Distribution",
             ReportPresentationFormatter.OrderCounts(report.TenureCounts)));
+        column.Item().Element(container => ComposeRecentHiresSection(container, report));
     }
 
     private static void ComposeStatCard(
@@ -263,6 +264,72 @@ public sealed class PdfContentComposer
                 }
             });
         });
+    }
+
+    private static void ComposeRecentHiresSection(
+        IContainer container,
+        HierarchyReport report)
+    {
+        ComposeSection(
+            container,
+            ReportPresentationFormatter.BuildRecentHireSectionTitle(report),
+            content =>
+            {
+                if (report.RecentHires.Count == 0)
+                {
+                    _ = content.Text("No employees joined during the configured period.")
+                        .Italic()
+                        .FontColor("#6B7467");
+                    return;
+                }
+
+                content.Table(table =>
+                {
+                    var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(1.8f);
+                        columns.RelativeColumn(1.2f);
+                        columns.RelativeColumn(1.5f);
+                        columns.RelativeColumn(1.3f);
+                        columns.RelativeColumn(0.95f);
+                        columns.RelativeColumn(0.95f);
+                        columns.RelativeColumn(0.9f);
+                        columns.RelativeColumn(1.2f);
+                    });
+
+                    table.Header(header =>
+                    {
+                        ComposeHeaderCell(header.Cell(), "Employee");
+                        ComposeHeaderCell(header.Cell(), "Department");
+                        ComposeHeaderCell(header.Cell(), "Job Title");
+                        ComposeHeaderCell(header.Cell(), "Location");
+                        ComposeHeaderCell(header.Cell(), "Birth");
+                        ComposeHeaderCell(header.Cell(), "Start");
+                        ComposeHeaderCell(header.Cell(), "Days With Us");
+                        ComposeHeaderCell(header.Cell(), "Manager");
+                    });
+
+                    foreach (var row in report.RecentHires)
+                    {
+                        ComposeBodyCell(
+                            table.Cell(),
+                            $"{row.DisplayName} (#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})");
+                        ComposeBodyCell(table.Cell(), row.Department ?? "-");
+                        ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
+                        ComposeBodyCell(table.Cell(), row.Location ?? "-");
+                        ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.DateOfBirth));
+                        ComposeBodyCell(table.Cell(), ReportPresentationFormatter.FormatDate(row.EmploymentStartDate));
+                        ComposeBodyCell(
+                            table.Cell(),
+                            ReportPresentationFormatter.FormatDaysWithUs(
+                                row.EmploymentStartDate,
+                                referenceDate));
+                        ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
+                    }
+                });
+            });
     }
 
     private static void ComposeSection(

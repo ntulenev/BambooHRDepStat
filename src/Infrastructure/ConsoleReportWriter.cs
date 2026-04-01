@@ -81,6 +81,8 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         WriteDistributionSection("Age Distribution", report.AgeCounts);
         AnsiConsole.WriteLine();
         WriteDistributionSection("Company Tenure Distribution", report.TenureCounts);
+        AnsiConsole.WriteLine();
+        WriteRecentHires(report);
     }
 
     private static string FormatUnavailability(IReadOnlyList<TimeOffEntry> entries)
@@ -323,6 +325,46 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 .Border(BoxBorder.Rounded);
             AnsiConsole.Write(panel);
         }
+    }
+
+    private static void WriteRecentHires(HierarchyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        AnsiConsole.MarkupLine(
+            $"[bold]{Escape(ReportPresentationFormatter.BuildRecentHireSectionTitle(report))}[/]");
+
+        if (report.RecentHires.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[grey]No employees joined during the configured period.[/]");
+            return;
+        }
+
+        var table = new Table().Border(TableBorder.Rounded);
+        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+        _ = table.AddColumn("Employee");
+        _ = table.AddColumn("Department");
+        _ = table.AddColumn("Job Title");
+        _ = table.AddColumn("Location");
+        _ = table.AddColumn("Birth Date");
+        _ = table.AddColumn("Employment Start");
+        _ = table.AddColumn("Days With Us");
+        _ = table.AddColumn("Manager");
+
+        foreach (var row in report.RecentHires)
+        {
+            _ = table.AddRow(
+                $"{Escape(row.DisplayName)} (#{row.EmployeeId})",
+                Escape(row.Department ?? "-"),
+                Escape(row.JobTitle ?? "-"),
+                Escape(row.Location ?? "-"),
+                Escape(FormatDate(row.DateOfBirth)),
+                Escape(FormatDate(row.EmploymentStartDate)),
+                Escape(ReportPresentationFormatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate)),
+                Escape(row.ManagerName ?? "-"));
+        }
+
+        AnsiConsole.Write(table);
     }
 
     private static string FormatEntry(TimeOffEntry entry)

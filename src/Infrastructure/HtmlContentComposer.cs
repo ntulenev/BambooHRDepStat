@@ -76,7 +76,10 @@ public sealed class HtmlContentComposer
                 ["__LOCATION_CARDS__"] = BuildDistributionCards(report.LocationCounts, warm: false),
                 ["__COUNTRY_CITY_SECTIONS__"] = BuildCountryCitySections(report.CountryCityCounts),
                 ["__AGE_CARDS__"] = BuildDistributionCards(report.AgeCounts, warm: true),
-                ["__TENURE_CARDS__"] = BuildDistributionCards(report.TenureCounts, warm: true)
+                ["__TENURE_CARDS__"] = BuildDistributionCards(report.TenureCounts, warm: true),
+                ["__RECENT_HIRE_TITLE__"] = Encode(
+                    ReportPresentationFormatter.BuildRecentHireSectionTitle(report)),
+                ["__RECENT_HIRE_ROWS__"] = BuildRecentHireRows(report)
             });
     }
 
@@ -124,6 +127,38 @@ public sealed class HtmlContentComposer
             _ = html.AppendLine(
                 CultureInfo.InvariantCulture,
                 $@"              <tr><td>{Encode(pair.Key)}</td><td>{pair.Value.ToString(CultureInfo.InvariantCulture)}</td></tr>");
+        }
+
+        return html.ToString();
+    }
+
+    private static string BuildRecentHireRows(HierarchyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var rows = report.RecentHires;
+        if (rows.Count == 0)
+        {
+            return """              <tr><td class="empty" colspan="8">No employees joined during the configured period.</td></tr>""";
+        }
+
+        var html = new StringBuilder(rows.Count * 256);
+        var referenceDate = DateOnly.FromDateTime(report.GeneratedAt.Date);
+
+        foreach (var row in rows)
+        {
+            _ = html.AppendLine(
+                CultureInfo.InvariantCulture,
+                $@"              <tr>
+                <td><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
+                <td>{Encode(row.Department ?? "-")}</td>
+                <td>{Encode(row.JobTitle ?? "-")}</td>
+                <td>{Encode(row.Location ?? "-")}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatDate(row.DateOfBirth))}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatDate(row.EmploymentStartDate))}</td>
+                <td>{Encode(ReportPresentationFormatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate))}</td>
+                <td>{Encode(row.ManagerName ?? "-")}</td>
+              </tr>");
         }
 
         return html.ToString();

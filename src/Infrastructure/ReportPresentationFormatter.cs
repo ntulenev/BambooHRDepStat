@@ -85,6 +85,31 @@ internal static class ReportPresentationFormatter
         return builder.ToString();
     }
 
+    public static string BuildRecentHireSectionTitle(HierarchyReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"New Joiners (Last {report.RecentHirePeriodDays} Days)");
+    }
+
+    public static string FormatDaysWithUs(DateOnly? employmentStartDate, DateOnly referenceDate)
+    {
+        if (employmentStartDate is null)
+        {
+            return "-";
+        }
+
+        var days = referenceDate.DayNumber - employmentStartDate.Value.DayNumber + 1;
+        if (days < 1)
+        {
+            days = 1;
+        }
+
+        return string.Create(CultureInfo.InvariantCulture, $"{days} days");
+    }
+
     private static string FormatEntry(TimeOffEntry entry)
     {
         var label = entry.Type == TimeOffEntryType.Holiday
