@@ -19,11 +19,11 @@ public sealed class HierarchyReportBuilderTests
                 new BambooHrField("hireDate", "Hire Date", "hireDate", "date")
             ],
             [
-                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
-                new BasicEmployee(2, "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
-                new BasicEmployee(3, "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
-                new BasicEmployee(4, "Diana White", "Diana", "White", "Diana", "Analyst", "Active"),
-                new BasicEmployee(5, "Frank Green", "Frank", "Green", "Frank", "Analyst", "Active")
+                new BasicEmployee(new EmployeeId(1), "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(new EmployeeId(2), "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
+                new BasicEmployee(new EmployeeId(3), "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(4), "Diana White", "Diana", "White", "Diana", "Analyst", "Active"),
+                new BasicEmployee(new EmployeeId(5), "Frank Green", "Frank", "Green", "Frank", "Analyst", "Active")
             ],
             new Dictionary<int, IReadOnlyDictionary<string, string?>>
             {
@@ -81,7 +81,7 @@ public sealed class HierarchyReportBuilderTests
                 new TimeOffEntry(
                     100,
                     TimeOffEntryType.TimeOff,
-                    employeeId: 2,
+                    employeeId: new EmployeeId(2),
                     "Bob Jones",
                     new DateOnly(2026, 3, 17),
                     new DateOnly(2026, 3, 18)),
@@ -101,9 +101,13 @@ public sealed class HierarchyReportBuilderTests
             new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
+            new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyTopologyBuilder(),
+            new EmployeeAvailabilityResolver(),
+            new HierarchyAnalytics(),
             new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
 
-        var report = await builder.BuildAsync(1, CancellationToken.None);
+        var report = await builder.BuildAsync(new EmployeeId(1), CancellationToken.None);
 
         string[] expectedNames = ["Alice Smith", "Bob Jones", "Carol Brown", "Diana White"];
         int[] expectedLevels = [0, 1, 2, 1];
@@ -163,11 +167,11 @@ public sealed class HierarchyReportBuilderTests
                 new BambooHrField("hireDate", "Hire Date", "hireDate", "date")
             ],
             [
-                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
-                new BasicEmployee(2, "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
-                new BasicEmployee(3, "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
-                new BasicEmployee(4, "Diana White", "Diana", "White", "Diana", "Engineer", "Active"),
-                new BasicEmployee(5, "Evan Black", "Evan", "Black", "Evan", "Engineer", "Active")
+                new BasicEmployee(new EmployeeId(1), "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(new EmployeeId(2), "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
+                new BasicEmployee(new EmployeeId(3), "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(4), "Diana White", "Diana", "White", "Diana", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(5), "Evan Black", "Evan", "Black", "Evan", "Engineer", "Active")
             ],
             new Dictionary<int, IReadOnlyDictionary<string, string?>>
             {
@@ -235,9 +239,13 @@ public sealed class HierarchyReportBuilderTests
             new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
+            new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyTopologyBuilder(),
+            new EmployeeAvailabilityResolver(),
+            new HierarchyAnalytics(),
             new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
 
-        var report = await builder.BuildAsync(1, CancellationToken.None);
+        var report = await builder.BuildAsync(new EmployeeId(1), CancellationToken.None);
 
         Assert.Equal(15, report.RecentHirePeriodDays);
         Assert.Equal(
@@ -264,12 +272,12 @@ public sealed class HierarchyReportBuilderTests
                 new BambooHrField("hireDate", "Hire Date", "hireDate", "date")
             ],
             [
-                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
-                new BasicEmployee(2, "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
-                new BasicEmployee(3, "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
-                new BasicEmployee(4, "Diana White", "Diana", "White", "Diana", "Engineer", "Active"),
-                new BasicEmployee(5, "Evan Black", "Evan", "Black", "Evan", "Engineer", "Active"),
-                new BasicEmployee(6, "Fiona Gray", "Fiona", "Gray", "Fiona", "Engineer", "Active")
+                new BasicEmployee(new EmployeeId(1), "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(new EmployeeId(2), "Bob Jones", "Bob", "Jones", "Bob", "Manager", "Active"),
+                new BasicEmployee(new EmployeeId(3), "Carol Brown", "Carol", "Brown", "Carol", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(4), "Diana White", "Diana", "White", "Diana", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(5), "Evan Black", "Evan", "Black", "Evan", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(6), "Fiona Gray", "Fiona", "Gray", "Fiona", "Engineer", "Active")
             ],
             new Dictionary<int, IReadOnlyDictionary<string, string?>>
             {
@@ -348,9 +356,13 @@ public sealed class HierarchyReportBuilderTests
             new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 3, 16),
                 new DateOnly(2026, 3, 20))),
+            new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyTopologyBuilder(),
+            new EmployeeAvailabilityResolver(),
+            new HierarchyAnalytics(),
             new FakeTimeProvider(new DateTimeOffset(2026, 3, 16, 8, 0, 0, TimeSpan.Zero)));
 
-        var report = await builder.BuildAsync(1, CancellationToken.None);
+        var report = await builder.BuildAsync(new EmployeeId(1), CancellationToken.None);
 
         Assert.Equal(4, report.LocationCounts["Germany"]);
         Assert.Equal(1, report.LocationCounts["United Kingdom"]);
@@ -398,9 +410,9 @@ public sealed class HierarchyReportBuilderTests
                 new BambooHrField("city", "City", "city", "text")
             ],
             [
-                new BasicEmployee(1, "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
-                new BasicEmployee(2, "Branko Borg", "Branko", "Borg", "Branko", "Engineer", "Active"),
-                new BasicEmployee(3, "Clara Weiss", "Clara", "Weiss", "Clara", "Engineer", "Active")
+                new BasicEmployee(new EmployeeId(1), "Alice Smith", "Alice", "Smith", "Alice", "Director", "Active"),
+                new BasicEmployee(new EmployeeId(2), "Branko Borg", "Branko", "Borg", "Branko", "Engineer", "Active"),
+                new BasicEmployee(new EmployeeId(3), "Clara Weiss", "Clara", "Weiss", "Clara", "Engineer", "Active")
             ],
             new Dictionary<int, IReadOnlyDictionary<string, string?>>
             {
@@ -458,14 +470,18 @@ public sealed class HierarchyReportBuilderTests
             new StubAvailabilityWindowProvider(new AvailabilityWindow(
                 new DateOnly(2026, 9, 21),
                 new DateOnly(2026, 9, 25))),
+            new EmployeeProfileDirectoryLoader(client, new NoOpLoadingNotifier()),
+            new HierarchyTopologyBuilder(),
+            new EmployeeAvailabilityResolver(),
+            new HierarchyAnalytics(),
             new FakeTimeProvider(new DateTimeOffset(2026, 9, 21, 8, 0, 0, TimeSpan.Zero)));
 
-        var report = await builder.BuildAsync(1, CancellationToken.None);
+        var report = await builder.BuildAsync(new EmployeeId(1), CancellationToken.None);
 
-        Assert.Empty(report.Rows.Single(row => row.EmployeeId == 1).UnavailabilityEntries);
-        Assert.Empty(report.Rows.Single(row => row.EmployeeId == 3).UnavailabilityEntries);
+        Assert.Empty(report.Rows.Single(row => row.EmployeeId.Value == 1).UnavailabilityEntries);
+        Assert.Empty(report.Rows.Single(row => row.EmployeeId.Value == 3).UnavailabilityEntries);
 
-        var maltaEmployeeEntries = report.Rows.Single(row => row.EmployeeId == 2).UnavailabilityEntries;
+        var maltaEmployeeEntries = report.Rows.Single(row => row.EmployeeId.Value == 2).UnavailabilityEntries;
         var employeeHoliday = Assert.Single(maltaEmployeeEntries);
         Assert.Equal(TimeOffEntryType.Holiday, employeeHoliday.Type);
         Assert.Equal("Malta National Day", employeeHoliday.Name);
@@ -532,13 +548,13 @@ public sealed class HierarchyReportBuilderTests
         }
 
         public Task<EmployeeFieldValues> GetEmployeeFieldsAsync(
-            int employeeId,
+            EmployeeId employeeId,
             IReadOnlyCollection<string> fieldKeys,
             CancellationToken ct)
         {
             _ = fieldKeys;
             _ = ct;
-            return Task.FromResult(new EmployeeFieldValues(employeeId, _employeeFields[employeeId]));
+            return Task.FromResult(new EmployeeFieldValues(employeeId, _employeeFields[employeeId.Value]));
         }
 
         public Task<IReadOnlyList<TimeOffEntry>> GetWhosOutAsync(
