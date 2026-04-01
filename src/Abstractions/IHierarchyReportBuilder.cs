@@ -10,5 +10,5 @@ public interface IHierarchyReportBuilder
     /// <summary>
     /// Builds report for the configured employee hierarchy.
     /// </summary>
-    Task<HierarchyReport> BuildAsync(int rootEmployeeId, CancellationToken ct);
+    Task<HierarchyReport> BuildAsync(EmployeeId rootEmployeeId, CancellationToken ct);
 }

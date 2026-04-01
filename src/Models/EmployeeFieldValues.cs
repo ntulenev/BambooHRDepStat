@@ -9,7 +9,7 @@ public sealed class EmployeeFieldValues
     /// Creates a field value container.
     /// </summary>
     public EmployeeFieldValues(
-        int employeeId,
+        EmployeeId employeeId,
         IReadOnlyDictionary<string, string?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -21,7 +21,7 @@ public sealed class EmployeeFieldValues
     /// <summary>
     /// Gets employee identifier.
     /// </summary>
-    public int EmployeeId { get; }
+    public EmployeeId EmployeeId { get; }
 
     /// <summary>
     /// Gets requested field values.

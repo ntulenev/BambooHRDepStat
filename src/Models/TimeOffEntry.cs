@@ -11,12 +11,18 @@ public sealed class TimeOffEntry
     public TimeOffEntry(
         int id,
         TimeOffEntryType type,
-        int? employeeId,
+        EmployeeId? employeeId,
         string name,
         DateOnly start,
         DateOnly end)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (end < start)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(end),
+                "Time-off end date must be on or after the start date.");
+        }
 
         Id = id;
         Type = type;
@@ -39,7 +45,7 @@ public sealed class TimeOffEntry
     /// <summary>
     /// Gets employee identifier when entry is time off.
     /// </summary>
-    public int? EmployeeId { get; }
+    public EmployeeId? EmployeeId { get; }
 
     /// <summary>
     /// Gets entry name.
@@ -55,4 +61,12 @@ public sealed class TimeOffEntry
     /// Gets end date.
     /// </summary>
     public DateOnly End { get; }
+
+    /// <summary>
+    /// Determines whether the entry affects the provided date.
+    /// </summary>
+    public bool Includes(DateOnly date)
+    {
+        return Start <= date && End >= date;
+    }
 }

@@ -10,7 +10,7 @@ public sealed class HierarchyReportRow
     /// </summary>
     public HierarchyReportRow(
         int level,
-        int employeeId,
+        EmployeeId employeeId,
         string displayName,
         string? department,
         string? jobTitle,
@@ -20,6 +20,7 @@ public sealed class HierarchyReportRow
         string? managerName,
         IReadOnlyList<TimeOffEntry> unavailabilityEntries)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(level);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentNullException.ThrowIfNull(unavailabilityEntries);
 
@@ -43,7 +44,7 @@ public sealed class HierarchyReportRow
     /// <summary>
     /// Gets employee identifier.
     /// </summary>
-    public int EmployeeId { get; }
+    public EmployeeId EmployeeId { get; }
 
     /// <summary>
     /// Gets employee display name.

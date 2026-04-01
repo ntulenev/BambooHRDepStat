@@ -9,7 +9,7 @@ public sealed class BasicEmployee
     /// Creates employee summary.
     /// </summary>
     public BasicEmployee(
-        int employeeId,
+        EmployeeId employeeId,
         string displayName,
         string firstName,
         string lastName,
@@ -35,7 +35,7 @@ public sealed class BasicEmployee
     /// <summary>
     /// Gets employee identifier.
     /// </summary>
-    public int EmployeeId { get; }
+    public EmployeeId EmployeeId { get; }
 
     /// <summary>
     /// Gets display name.

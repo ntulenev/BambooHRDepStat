@@ -43,7 +43,7 @@ public sealed class Application : IApplication
         var report = await _loadingNotifier.RunAsync(
                 "Connecting to BambooHR...",
                 async cancellationToken => await _hierarchyReportBuilder
-                    .BuildAsync(_options.EmployeeId, cancellationToken)
+                    .BuildAsync(_options.RootEmployeeId, cancellationToken)
                     .ConfigureAwait(false),
                 ct)
             .ConfigureAwait(false);

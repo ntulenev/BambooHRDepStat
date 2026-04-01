@@ -94,17 +94,10 @@ public sealed class BambooHrClient : IBambooHrClient
 
     /// <inheritdoc/>
     public async Task<EmployeeFieldValues> GetEmployeeFieldsAsync(
-        int employeeId,
+        EmployeeId employeeId,
         IReadOnlyCollection<string> fieldKeys,
         CancellationToken ct)
     {
-        if (employeeId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(employeeId),
-                "Employee ID must be greater than zero.");
-        }
-
         ArgumentNullException.ThrowIfNull(fieldKeys);
 
         var requestedFields = string.Join(
@@ -113,7 +106,7 @@ public sealed class BambooHrClient : IBambooHrClient
                 .Where(field => !string.IsNullOrWhiteSpace(field))
                 .Distinct(StringComparer.OrdinalIgnoreCase));
 
-        var url = $"/api/v1/employees/{employeeId}?fields={Uri.EscapeDataString(requestedFields)}";
+        var url = $"/api/v1/employees/{employeeId.Value}?fields={Uri.EscapeDataString(requestedFields)}";
         using var response = await SendWithRetryAsync(CreateRelativeUri(url), ct)
             .ConfigureAwait(false);
 
@@ -174,10 +167,10 @@ public sealed class BambooHrClient : IBambooHrClient
 
     private static BasicEmployee ParseDirectoryEmployee(JsonElement element)
     {
-        var employeeId = int.Parse(
+        var employeeId = new EmployeeId(int.Parse(
             element.GetProperty("id").GetString()
             ?? throw new InvalidOperationException("Employee ID is missing."),
-            CultureInfo.InvariantCulture);
+            CultureInfo.InvariantCulture));
 
         var firstName = element.GetProperty("firstName").GetString()
             ?? throw new InvalidOperationException("Employee first name is missing.");
@@ -230,8 +223,7 @@ public sealed class BambooHrClient : IBambooHrClient
             element.GetProperty("id").GetInt32(),
             type,
             element.TryGetProperty("employeeId", out var employeeIdElement)
-                && employeeIdElement.ValueKind == JsonValueKind.Number
-                ? employeeIdElement.GetInt32()
+                ? ParseEmployeeId(employeeIdElement)
                 : null,
             element.GetProperty("name").GetString() ?? string.Empty,
             DateOnly.Parse(
@@ -245,6 +237,24 @@ public sealed class BambooHrClient : IBambooHrClient
     private static Uri CreateRelativeUri(string path)
     {
         return new Uri(path, UriKind.Relative);
+    }
+
+    private static EmployeeId? ParseEmployeeId(JsonElement employeeIdElement)
+    {
+        return employeeIdElement.ValueKind switch
+        {
+            JsonValueKind.Number => new EmployeeId(employeeIdElement.GetInt32()),
+            JsonValueKind.String => EmployeeId.TryParse(employeeIdElement.GetString(), out var employeeId)
+                ? employeeId
+                : null,
+            JsonValueKind.False => null,
+            JsonValueKind.Null => null,
+            JsonValueKind.Object => null,
+            JsonValueKind.Array => null,
+            JsonValueKind.True => null,
+            JsonValueKind.Undefined => null,
+            _ => null
+        };
     }
 
     private async Task<HttpResponseMessage> SendWithRetryAsync(Uri uri, CancellationToken ct)

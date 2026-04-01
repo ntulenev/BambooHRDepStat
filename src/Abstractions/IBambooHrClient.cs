@@ -21,7 +21,7 @@ public interface IBambooHrClient
     /// Gets dynamic fields for one employee.
     /// </summary>
     Task<EmployeeFieldValues> GetEmployeeFieldsAsync(
-        int employeeId,
+        EmployeeId employeeId,
         IReadOnlyCollection<string> fieldKeys,
         CancellationToken ct);
 

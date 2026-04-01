@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Models;
 
 /// <summary>
@@ -9,7 +11,7 @@ public sealed class EmployeeProfile
     /// Creates employee profile.
     /// </summary>
     public EmployeeProfile(
-        int employeeId,
+        EmployeeId employeeId,
         string displayName,
         string firstName,
         string lastName,
@@ -22,7 +24,7 @@ public sealed class EmployeeProfile
         DateOnly? dateOfBirth,
         DateOnly? hireDate,
         string? workEmail,
-        string? managerLookupValue)
+        ManagerReference manager)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
@@ -42,15 +44,13 @@ public sealed class EmployeeProfile
         DateOfBirth = dateOfBirth;
         HireDate = hireDate;
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
-        ManagerLookupValue = string.IsNullOrWhiteSpace(managerLookupValue)
-            ? null
-            : managerLookupValue;
+        Manager = manager;
     }
 
     /// <summary>
     /// Gets employee identifier.
     /// </summary>
-    public int EmployeeId { get; }
+    public EmployeeId EmployeeId { get; }
 
     /// <summary>
     /// Gets display name.
@@ -113,7 +113,115 @@ public sealed class EmployeeProfile
     public string? WorkEmail { get; }
 
     /// <summary>
-    /// Gets raw manager lookup value.
+    /// Gets manager relationship reference.
     /// </summary>
-    public string? ManagerLookupValue { get; }
+    public ManagerReference Manager { get; }
+
+    /// <summary>
+    /// Gets raw manager lookup value for diagnostic and display scenarios.
+    /// </summary>
+    public string? ManagerLookupValue => Manager.DisplayName ?? Manager.EmployeeId?.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Gets candidate names that BambooHR may use in manager lookup fields.
+    /// </summary>
+    public IEnumerable<string> CandidateNames => EnumerateCandidateNames();
+
+    /// <summary>
+    /// Tries to resolve manager identifier when BambooHR relationship field stores IDs.
+    /// </summary>
+    public bool TryGetManagerEmployeeId(out EmployeeId managerEmployeeId)
+    {
+        if (Manager.EmployeeId.HasValue)
+        {
+            managerEmployeeId = Manager.EmployeeId.Value;
+            return true;
+        }
+
+        managerEmployeeId = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Resolves the best country label for report grouping.
+    /// </summary>
+    public string ResolveCountryLabel()
+    {
+        if (!string.IsNullOrWhiteSpace(Country))
+        {
+            return Country;
+        }
+
+        if (TryParseLocation(Location, out _, out var country))
+        {
+            return country!;
+        }
+
+        return string.IsNullOrWhiteSpace(Location)
+            ? "Unknown"
+            : Location!;
+    }
+
+    /// <summary>
+    /// Resolves the best city label for report grouping.
+    /// </summary>
+    public string? ResolveCityLabel()
+    {
+        if (!string.IsNullOrWhiteSpace(City))
+        {
+            return City;
+        }
+
+        return TryParseLocation(Location, out var city, out _)
+            ? city
+            : null;
+    }
+
+    /// <summary>
+    /// Resolves manager display name using loaded profiles when possible.
+    /// </summary>
+    public string? ResolveManagerDisplayName(
+        IReadOnlyDictionary<EmployeeId, EmployeeProfile> profilesByEmployeeId)
+    {
+        ArgumentNullException.ThrowIfNull(profilesByEmployeeId);
+
+        if (string.IsNullOrWhiteSpace(ManagerLookupValue))
+        {
+            return null;
+        }
+
+        return Manager.ResolveDisplayName(profilesByEmployeeId);
+    }
+
+    private static bool TryParseLocation(
+        string? location,
+        out string? city,
+        out string? country)
+    {
+        city = null;
+        country = null;
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            return false;
+        }
+
+        var parts = location
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        city = parts[0];
+        country = parts[^1];
+        return !string.IsNullOrWhiteSpace(city)
+            && !string.IsNullOrWhiteSpace(country);
+    }
+
+    private IEnumerable<string> EnumerateCandidateNames()
+    {
+        yield return DisplayName;
+        yield return $"{FirstName} {LastName}";
+        yield return $"{PreferredName} {LastName}";
+    }
 }

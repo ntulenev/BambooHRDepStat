@@ -26,6 +26,11 @@ public sealed class BambooHrOptions
     public int EmployeeId { get; set; }
 
     /// <summary>
+    /// Gets root employee identifier as a value object.
+    /// </summary>
+    public EmployeeId RootEmployeeId => new(EmployeeId);
+
+    /// <summary>
     /// Gets or sets how many days ahead availability should be checked, starting from today.
     /// </summary>
     public int AvailabilityLookaheadDays { get; set; } = 7;

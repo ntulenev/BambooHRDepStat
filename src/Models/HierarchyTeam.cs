@@ -8,8 +8,11 @@ public sealed class HierarchyTeam
     /// <summary>
     /// Creates team summary.
     /// </summary>
+    /// <summary>
+    /// Creates team summary.
+    /// </summary>
     public HierarchyTeam(
-        int managerEmployeeId,
+        EmployeeId managerEmployeeId,
         string managerDisplayName,
         IReadOnlyList<string> memberDisplayNames,
         IReadOnlyDictionary<string, int> gradeCounts)
@@ -27,7 +30,7 @@ public sealed class HierarchyTeam
     /// <summary>
     /// Gets manager identifier.
     /// </summary>
-    public int ManagerEmployeeId { get; }
+    public EmployeeId ManagerEmployeeId { get; }
 
     /// <summary>
     /// Gets manager display name.
