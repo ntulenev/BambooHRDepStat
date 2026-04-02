@@ -222,10 +222,7 @@ public sealed class BambooHrClient : IBambooHrClient
                 CultureInfo.InvariantCulture));
     }
 
-    private static Uri CreateRelativeUri(string path)
-    {
-        return new Uri(path, UriKind.Relative);
-    }
+    private static Uri CreateRelativeUri(string path) => new(path, UriKind.Relative);
 
     private static EmployeeId? ParseEmployeeId(JsonElement employeeIdElement)
     {
