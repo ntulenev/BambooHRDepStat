@@ -7,7 +7,7 @@ namespace Infrastructure.Tests;
 public sealed class HtmlReportRendererTests
 {
     [Fact(DisplayName = "The HTML renderer writes a timestamped report file when HTML output is enabled.")]
-    [Trait("Category", "Unit")]
+    [Trait("Category", "Integration")]
     public void RenderShouldWriteTimestampedHtmlFileWhenEnabled()
     {
         // Arrange

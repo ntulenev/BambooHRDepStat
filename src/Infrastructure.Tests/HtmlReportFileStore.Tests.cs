@@ -5,7 +5,7 @@ namespace Infrastructure.Tests;
 public sealed class HtmlReportFileStoreTests
 {
     [Fact(DisplayName = "The file store creates the output directory and writes the HTML document using UTF-8.")]
-    [Trait("Category", "Unit")]
+    [Trait("Category", "Integration")]
     public void SaveShouldCreateDirectoryAndWriteHtml()
     {
         // Arrange
