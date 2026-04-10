@@ -15,14 +15,17 @@ public sealed class CompositeReportWriter : IReportWriter
     public CompositeReportWriter(
         IConsoleReportRenderer consoleReportRenderer,
         IHtmlReportRenderer htmlReportRenderer,
+        ICsvReportRenderer csvReportRenderer,
         IPdfReportRenderer pdfReportRenderer)
     {
         ArgumentNullException.ThrowIfNull(consoleReportRenderer);
         ArgumentNullException.ThrowIfNull(htmlReportRenderer);
+        ArgumentNullException.ThrowIfNull(csvReportRenderer);
         ArgumentNullException.ThrowIfNull(pdfReportRenderer);
 
         _consoleReportRenderer = consoleReportRenderer;
         _htmlReportRenderer = htmlReportRenderer;
+        _csvReportRenderer = csvReportRenderer;
         _pdfReportRenderer = pdfReportRenderer;
     }
 
@@ -33,10 +36,12 @@ public sealed class CompositeReportWriter : IReportWriter
 
         _consoleReportRenderer.Render(report);
         _htmlReportRenderer.Render(report);
+        _csvReportRenderer.Render(report);
         _pdfReportRenderer.Render(report);
     }
 
     private readonly IConsoleReportRenderer _consoleReportRenderer;
     private readonly IHtmlReportRenderer _htmlReportRenderer;
+    private readonly ICsvReportRenderer _csvReportRenderer;
     private readonly IPdfReportRenderer _pdfReportRenderer;
 }

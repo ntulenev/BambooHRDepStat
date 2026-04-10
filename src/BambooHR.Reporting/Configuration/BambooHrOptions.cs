@@ -53,6 +53,11 @@ public sealed class BambooHrOptions
     public PdfReportOptions Pdf { get; set; } = new();
 
     /// <summary>
+    /// Gets or sets CSV export output options.
+    /// </summary>
+    public ExportOptions Export { get; set; } = new();
+
+    /// <summary>
     /// Validates configuration values.
     /// </summary>
     public void Validate()
@@ -84,6 +89,12 @@ public sealed class BambooHrOptions
         {
             throw new InvalidOperationException(
                 $"{SectionName}:RecentHirePeriodDays must be greater than zero.");
+        }
+
+        if (Export.Enabled && string.IsNullOrWhiteSpace(Export.OutputPath))
+        {
+            throw new InvalidOperationException(
+                $"{SectionName}:Export:OutputPath is required when export is enabled.");
         }
 
         foreach (var mapping in HolidayCountryMappings)

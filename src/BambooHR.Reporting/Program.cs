@@ -36,6 +36,7 @@ var builder = Host.CreateDefaultBuilder(args)
             options.HolidayCountryMappings));
         _ = services.AddSingleton(options.Html);
         _ = services.AddSingleton(options.Pdf);
+        _ = services.AddSingleton(options.Export);
         _ = services.AddSingleton(TimeProvider.System);
         _ = services.AddSingleton<IApplication, Application>();
         _ = services.AddSingleton<ILoadingNotifier, ConsoleLoadingNotifier>();
@@ -52,6 +53,8 @@ var builder = Host.CreateDefaultBuilder(args)
         _ = services.AddSingleton<HtmlContentComposer>();
         _ = services.AddSingleton<HtmlReportLauncher>();
         _ = services.AddSingleton<IHtmlReportRenderer, HtmlReportRenderer>();
+        _ = services.AddSingleton<CsvReportFileStore>();
+        _ = services.AddSingleton<ICsvReportRenderer, CsvReportRenderer>();
         _ = services.AddSingleton<PdfReportFileStore>();
         _ = services.AddSingleton<PdfContentComposer>();
         _ = services.AddSingleton<IPdfReportRenderer, PdfReportRenderer>();

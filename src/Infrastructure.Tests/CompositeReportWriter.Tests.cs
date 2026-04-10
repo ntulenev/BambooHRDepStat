@@ -16,10 +16,11 @@ public sealed class CompositeReportWriterTests
     {
         // Arrange
         var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict).Object;
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict).Object;
         var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict).Object;
 
         // Act
-        var action = () => new CompositeReportWriter(null!, htmlReportRenderer, pdfReportRenderer);
+        var action = () => new CompositeReportWriter(null!, htmlReportRenderer, csvReportRenderer, pdfReportRenderer);
 
         // Assert
         action.Should().Throw<ArgumentNullException>();
@@ -31,10 +32,27 @@ public sealed class CompositeReportWriterTests
     {
         // Arrange
         var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict).Object;
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict).Object;
         var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict).Object;
 
         // Act
-        var action = () => new CompositeReportWriter(consoleReportRenderer, null!, pdfReportRenderer);
+        var action = () => new CompositeReportWriter(consoleReportRenderer, null!, csvReportRenderer, pdfReportRenderer);
+
+        // Assert
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact(DisplayName = "The constructor throws when the CSV report renderer is null.")]
+    [Trait("Category", "Unit")]
+    public void CtorShouldThrowWhenCsvReportRendererIsNull()
+    {
+        // Arrange
+        var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict).Object;
+        var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict).Object;
+        var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict).Object;
+
+        // Act
+        var action = () => new CompositeReportWriter(consoleReportRenderer, htmlReportRenderer, null!, pdfReportRenderer);
 
         // Assert
         action.Should().Throw<ArgumentNullException>();
@@ -47,9 +65,10 @@ public sealed class CompositeReportWriterTests
         // Arrange
         var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict).Object;
         var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict).Object;
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict).Object;
 
         // Act
-        var action = () => new CompositeReportWriter(consoleReportRenderer, htmlReportRenderer, null!);
+        var action = () => new CompositeReportWriter(consoleReportRenderer, htmlReportRenderer, csvReportRenderer, null!);
 
         // Assert
         action.Should().Throw<ArgumentNullException>();
@@ -63,17 +82,20 @@ public sealed class CompositeReportWriterTests
         var report = CreateReport();
         var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict);
         var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict);
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict);
         var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict);
         var consoleRenderCalls = 0;
 
         consoleReportRenderer.Setup(renderer => renderer.Render(report))
             .Callback(() => consoleRenderCalls++);
         htmlReportRenderer.Setup(renderer => renderer.Render(report));
+        csvReportRenderer.Setup(renderer => renderer.Render(report));
         pdfReportRenderer.Setup(renderer => renderer.Render(report));
 
         var writer = new CompositeReportWriter(
             consoleReportRenderer.Object,
             htmlReportRenderer.Object,
+            csvReportRenderer.Object,
             pdfReportRenderer.Object);
 
         // Act
@@ -91,17 +113,20 @@ public sealed class CompositeReportWriterTests
         var report = CreateReport();
         var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict);
         var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict);
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict);
         var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict);
         var htmlRenderCalls = 0;
 
         consoleReportRenderer.Setup(renderer => renderer.Render(report));
         htmlReportRenderer.Setup(renderer => renderer.Render(report))
             .Callback(() => htmlRenderCalls++);
+        csvReportRenderer.Setup(renderer => renderer.Render(report));
         pdfReportRenderer.Setup(renderer => renderer.Render(report));
 
         var writer = new CompositeReportWriter(
             consoleReportRenderer.Object,
             htmlReportRenderer.Object,
+            csvReportRenderer.Object,
             pdfReportRenderer.Object);
 
         // Act
@@ -109,6 +134,37 @@ public sealed class CompositeReportWriterTests
 
         // Assert
         htmlRenderCalls.Should().Be(1);
+    }
+
+    [Fact(DisplayName = "The composite report writer forwards the report to the CSV renderer.")]
+    [Trait("Category", "Unit")]
+    public void WriteShouldRenderReportThroughCsvOutput()
+    {
+        // Arrange
+        var report = CreateReport();
+        var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict);
+        var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict);
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict);
+        var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict);
+        var csvRenderCalls = 0;
+
+        consoleReportRenderer.Setup(renderer => renderer.Render(report));
+        htmlReportRenderer.Setup(renderer => renderer.Render(report));
+        csvReportRenderer.Setup(renderer => renderer.Render(report))
+            .Callback(() => csvRenderCalls++);
+        pdfReportRenderer.Setup(renderer => renderer.Render(report));
+
+        var writer = new CompositeReportWriter(
+            consoleReportRenderer.Object,
+            htmlReportRenderer.Object,
+            csvReportRenderer.Object,
+            pdfReportRenderer.Object);
+
+        // Act
+        writer.Write(report);
+
+        // Assert
+        csvRenderCalls.Should().Be(1);
     }
 
     [Fact(DisplayName = "The composite report writer forwards the report to the PDF renderer.")]
@@ -119,17 +175,20 @@ public sealed class CompositeReportWriterTests
         var report = CreateReport();
         var consoleReportRenderer = new Mock<IConsoleReportRenderer>(MockBehavior.Strict);
         var htmlReportRenderer = new Mock<IHtmlReportRenderer>(MockBehavior.Strict);
+        var csvReportRenderer = new Mock<ICsvReportRenderer>(MockBehavior.Strict);
         var pdfReportRenderer = new Mock<IPdfReportRenderer>(MockBehavior.Strict);
         var pdfRenderCalls = 0;
 
         consoleReportRenderer.Setup(renderer => renderer.Render(report));
         htmlReportRenderer.Setup(renderer => renderer.Render(report));
+        csvReportRenderer.Setup(renderer => renderer.Render(report));
         pdfReportRenderer.Setup(renderer => renderer.Render(report))
             .Callback(() => pdfRenderCalls++);
 
         var writer = new CompositeReportWriter(
             consoleReportRenderer.Object,
             htmlReportRenderer.Object,
+            csvReportRenderer.Object,
             pdfReportRenderer.Object);
 
         // Act

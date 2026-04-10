@@ -36,7 +36,8 @@ internal static class ReportTestData
                 new DateOnly(1985, 5, 10),
                 new DateOnly(2018, 1, 1),
                 null,
-                []),
+                [],
+                "alice@example.com"),
             new HierarchyReportRow(
                 1,
                 childEmployeeId,
@@ -55,7 +56,8 @@ internal static class ReportTestData
                         "Bob Jones",
                         new DateOnly(2026, 4, 2),
                         new DateOnly(2026, 4, 3))
-                ])
+                ],
+                "bob@example.com")
         ];
         IReadOnlyList<HierarchyReportRow> recentHires = [rows[1]];
         IReadOnlyList<HierarchyTeam> teams =
