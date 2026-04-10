@@ -76,7 +76,8 @@ public sealed class HierarchyTopologyBuilder : IHierarchyTopologyBuilder
                 .. entries
                     .OrderBy(entry => entry.Start)
                     .ThenBy(entry => entry.End)
-            ]));
+            ],
+            profile.WorkEmail));
 
         if (!childrenByManager.TryGetValue(employeeId, out var children))
         {

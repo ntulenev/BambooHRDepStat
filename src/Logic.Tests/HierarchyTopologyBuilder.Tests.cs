@@ -97,6 +97,7 @@ public sealed class HierarchyTopologyBuilderTests
             ("Carol Brown", 1));
         rows[1].UnavailabilityEntries.Select(entry => entry.Id).Should().Equal(10, 20);
         rows[1].ManagerName.Should().Be("Alice Smith");
+        rows[1].WorkEmail.Should().Be("bob@example.com");
     }
 
     [Fact(DisplayName = "The hierarchy collector returns the root employee and all reachable descendants without duplicates.")]
@@ -155,7 +156,7 @@ public sealed class HierarchyTopologyBuilderTests
             city: "Berlin",
             dateOfBirth: null,
             hireDate: null,
-            workEmail: null,
+            workEmail: $"{names[0].ToLowerInvariant()}@example.com",
             manager: new ManagerReference(
                 managerEmployeeId is null ? null : new EmployeeId(managerEmployeeId.Value),
                 managerDisplayName));
