@@ -207,7 +207,8 @@ public sealed class HierarchyReportTests
                 dateOfBirth: null,
                 employmentStartDate: null,
                 managerName: null,
-                [])
+                [],
+                team: "Leadership Team")
         ];
         IReadOnlyList<HierarchyTeam> teams =
         [

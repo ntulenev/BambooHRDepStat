@@ -18,5 +18,6 @@ public interface IEmployeeProfileDirectoryLoader
         BambooHrField? cityField,
         BambooHrField? birthDateField,
         BambooHrField? hireDateField,
+        BambooHrField? teamField,
         CancellationToken ct);
 }

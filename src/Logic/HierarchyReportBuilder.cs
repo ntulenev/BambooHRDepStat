@@ -69,6 +69,7 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
                 fieldSelection.CityField,
                 fieldSelection.BirthDateField,
                 fieldSelection.HireDateField,
+                fieldSelection.TeamField,
                 ct)
             .ConfigureAwait(false);
         var profilesByEmployeeId = profiles.ToDictionary(

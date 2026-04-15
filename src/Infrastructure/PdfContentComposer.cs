@@ -102,21 +102,23 @@ public sealed class PdfContentComposer
 
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(2.4f);
-                    columns.RelativeColumn(1.4f);
-                    columns.RelativeColumn(1.4f);
-                    columns.RelativeColumn(1.5f);
-                    columns.RelativeColumn(0.75f);
-                    columns.RelativeColumn(1f);
-                    columns.RelativeColumn(1f);
+                    columns.RelativeColumn(2.2f);
                     columns.RelativeColumn(1.2f);
-                    columns.RelativeColumn(1.8f);
+                    columns.RelativeColumn(1.2f);
+                    columns.RelativeColumn(1.3f);
+                    columns.RelativeColumn(1.4f);
+                    columns.RelativeColumn(0.7f);
+                    columns.RelativeColumn(0.8f);
+                    columns.RelativeColumn(0.9f);
+                    columns.RelativeColumn(1.1f);
+                    columns.RelativeColumn(1.6f);
                 });
 
                 table.Header(header =>
                 {
                     ComposeHeaderCell(header.Cell(), "Employee");
                     ComposeHeaderCell(header.Cell(), "Department");
+                    ComposeHeaderCell(header.Cell(), "Team");
                     ComposeHeaderCell(header.Cell(), "Job Title");
                     ComposeHeaderCell(header.Cell(), "Location");
                     ComposeHeaderCell(header.Cell(), "Birth");
@@ -133,6 +135,7 @@ public sealed class PdfContentComposer
                         _formatter.BuildHierarchyDisplayName(row),
                         leftPadding: row.Level * 8f);
                     ComposeBodyCell(table.Cell(), row.Department ?? "-");
+                    ComposeBodyCell(table.Cell(), row.Team ?? "-");
                     ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                     ComposeBodyCell(table.Cell(), row.Location ?? "-");
                     ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
@@ -360,20 +363,22 @@ public sealed class PdfContentComposer
                     table.ColumnsDefinition(columns =>
                     {
                         columns.RelativeColumn(1.8f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(1.5f);
+                        columns.RelativeColumn(1f);
+                        columns.RelativeColumn(1f);
                         columns.RelativeColumn(1.3f);
-                        columns.RelativeColumn(0.95f);
-                        columns.RelativeColumn(0.75f);
-                        columns.RelativeColumn(0.95f);
-                        columns.RelativeColumn(0.9f);
                         columns.RelativeColumn(1.2f);
+                        columns.RelativeColumn(0.9f);
+                        columns.RelativeColumn(0.7f);
+                        columns.RelativeColumn(0.9f);
+                        columns.RelativeColumn(0.9f);
+                        columns.RelativeColumn(1.1f);
                     });
 
                     table.Header(header =>
                     {
                         ComposeHeaderCell(header.Cell(), "Employee");
                         ComposeHeaderCell(header.Cell(), "Department");
+                        ComposeHeaderCell(header.Cell(), "Team");
                         ComposeHeaderCell(header.Cell(), "Job Title");
                         ComposeHeaderCell(header.Cell(), "Location");
                         ComposeHeaderCell(header.Cell(), "Birth");
@@ -389,6 +394,7 @@ public sealed class PdfContentComposer
                             table.Cell(),
                             $"{row.DisplayName} (#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})");
                         ComposeBodyCell(table.Cell(), row.Department ?? "-");
+                        ComposeBodyCell(table.Cell(), row.Team ?? "-");
                         ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                         ComposeBodyCell(table.Cell(), row.Location ?? "-");
                         ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));

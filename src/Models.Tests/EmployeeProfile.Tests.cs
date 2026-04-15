@@ -167,7 +167,8 @@ public sealed class EmployeeProfileTests
             dateOfBirth: null,
             hireDate: null,
             workEmail: null,
-            manager: new ManagerReference(managerEmployeeId, null));
+            manager: new ManagerReference(managerEmployeeId, null),
+            team: "ADF Processing Team");
         var profilesByEmployeeId = new Dictionary<EmployeeId, EmployeeProfile>
         {
             [managerEmployeeId] = managerProfile
@@ -202,7 +203,8 @@ public sealed class EmployeeProfileTests
             dateOfBirth: null,
             hireDate: null,
             workEmail: null,
-            manager: default);
+            manager: default,
+            team: "ADF Processing Team");
     }
 
     private static EmployeeProfile CreateProfileWithPreferredName(string displayName, string preferredName)
@@ -223,6 +225,7 @@ public sealed class EmployeeProfileTests
             dateOfBirth: null,
             hireDate: null,
             workEmail: null,
-            manager: default);
+            manager: default,
+            team: "ADF Processing Team");
     }
 }

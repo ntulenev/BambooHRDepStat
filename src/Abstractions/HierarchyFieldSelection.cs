@@ -16,7 +16,8 @@ public sealed class HierarchyFieldSelection
         BambooHrField? countryField,
         BambooHrField? cityField,
         BambooHrField? birthDateField,
-        BambooHrField? hireDateField)
+        BambooHrField? hireDateField,
+        BambooHrField? teamField)
     {
         ArgumentNullException.ThrowIfNull(relationshipField);
 
@@ -26,6 +27,7 @@ public sealed class HierarchyFieldSelection
         CityField = cityField;
         BirthDateField = birthDateField;
         HireDateField = hireDateField;
+        TeamField = teamField;
     }
 
     /// <summary>
@@ -57,4 +59,9 @@ public sealed class HierarchyFieldSelection
     /// Gets the preferred hire date field when available.
     /// </summary>
     public BambooHrField? HireDateField { get; }
+
+    /// <summary>
+    /// Gets the preferred team field when available.
+    /// </summary>
+    public BambooHrField? TeamField { get; }
 }

@@ -33,7 +33,8 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
             FindField(fields, PreferredCountryFields),
             FindField(fields, PreferredCityFields),
             FindField(fields, PreferredBirthDateFields),
-            FindField(fields, PreferredHireDateFields));
+            FindField(fields, PreferredHireDateFields),
+            FindField(fields, PreferredTeamFields));
     }
 
     private async Task<HierarchyRelationshipField> ResolveRelationshipFieldAsync(
@@ -199,6 +200,15 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
         ("startDate", "Start Date"),
         ("dateHired", "Date Hired"),
         ("employmentStartDate", "Employment Start Date")
+    ];
+
+    private static readonly (string RequestKey, string DisplayName)[] PreferredTeamFields =
+    [
+        ("division", "Division"),
+        ("team", "Team"),
+        ("teamName", "Team"),
+        ("workTeam", "Work Team"),
+        ("employeeTeam", "Employee Team")
     ];
 
     private static readonly HierarchyRelationshipField[] PreferredManagerIdFields =

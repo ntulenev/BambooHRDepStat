@@ -119,7 +119,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
     {
         ArgumentNullException.ThrowIfNull(row);
 
-        var details = $"{row.EmployeeId} | {row.Department ?? "-"} | {row.JobTitle ?? "-"}";
+        var details = $"{row.EmployeeId} | {row.Department ?? "-"} | {row.Team ?? "-"} | {row.JobTitle ?? "-"}";
         var location = $"{Environment.NewLine}[grey]Location: {Escape(row.Location ?? "-")}[/]";
         var birthDate =
             $"{Environment.NewLine}[grey]Birth date: {FormatDate(row.DateOfBirth)} | Age: {Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate))}[/]";
@@ -395,6 +395,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         var table = new Table().Border(TableBorder.Rounded);
         _ = table.AddColumn("Employee");
         _ = table.AddColumn("Department");
+        _ = table.AddColumn("Team");
         _ = table.AddColumn("Job Title");
         _ = table.AddColumn("Location");
         _ = table.AddColumn("Birth Date");
@@ -408,6 +409,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             _ = table.AddRow(
                 $"{Escape(row.DisplayName)} (#{row.EmployeeId})",
                 Escape(row.Department ?? "-"),
+                Escape(row.Team ?? "-"),
                 Escape(row.JobTitle ?? "-"),
                 Escape(row.Location ?? "-"),
                 Escape(FormatDate(row.DateOfBirth)),

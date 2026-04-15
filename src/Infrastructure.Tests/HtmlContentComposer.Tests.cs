@@ -22,6 +22,7 @@ public sealed class HtmlContentComposerTests
         html.Should().Contain("Alice &amp; Smith");
         html.Should().Contain("Founders Day");
         html.Should().Contain("Bob Jones");
+        html.Should().Contain("ADF Processing Team");
         html.Should().Contain("Reports To (employee name)");
         html.Should().NotContain("__ROOT_EMPLOYEE__");
     }

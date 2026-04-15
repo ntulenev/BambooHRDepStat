@@ -24,7 +24,8 @@ public sealed class EmployeeProfile
         DateOnly? dateOfBirth,
         DateOnly? hireDate,
         string? workEmail,
-        ManagerReference manager)
+        ManagerReference manager,
+        string? team = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
@@ -37,6 +38,7 @@ public sealed class EmployeeProfile
         LastName = lastName;
         PreferredName = preferredName;
         Department = string.IsNullOrWhiteSpace(department) ? null : department;
+        Team = string.IsNullOrWhiteSpace(team) ? null : team;
         JobTitle = string.IsNullOrWhiteSpace(jobTitle) ? null : jobTitle;
         Location = string.IsNullOrWhiteSpace(location) ? null : location;
         Country = string.IsNullOrWhiteSpace(country) ? null : country;
@@ -76,6 +78,11 @@ public sealed class EmployeeProfile
     /// Gets department.
     /// </summary>
     public string? Department { get; }
+
+    /// <summary>
+    /// Gets team.
+    /// </summary>
+    public string? Team { get; }
 
     /// <summary>
     /// Gets job title.

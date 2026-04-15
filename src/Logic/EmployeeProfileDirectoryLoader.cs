@@ -35,6 +35,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         BambooHrField? cityField,
         BambooHrField? birthDateField,
         BambooHrField? hireDateField,
+        BambooHrField? teamField,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(employees);
@@ -53,6 +54,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         AddFieldRequestKey(requestKeys, cityField);
         AddFieldRequestKey(requestKeys, birthDateField);
         AddFieldRequestKey(requestKeys, hireDateField);
+        AddFieldRequestKey(requestKeys, teamField);
 
         var profiles = new ConcurrentBag<EmployeeProfile>();
         var loadedProfiles = 0;
@@ -81,6 +83,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                     _ = TryGetFieldValue(fieldValues, cityField, out var city);
                     _ = TryGetFieldValue(fieldValues, birthDateField, out var birthDateValue);
                     _ = TryGetFieldValue(fieldValues, hireDateField, out var hireDateValue);
+                    _ = TryGetFieldValue(fieldValues, teamField, out var team);
                     _ = fieldValues.Values.TryGetValue(
                         relationshipField.RequestKey,
                         out var managerLookupValue);
@@ -99,7 +102,8 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                         ParseDate(birthDateValue),
                         ParseDate(hireDateValue),
                         workEmail,
-                        ManagerReference.Parse(managerLookupValue)));
+                        ManagerReference.Parse(managerLookupValue),
+                        team));
 
                     var completed = Interlocked.Increment(ref loadedProfiles);
                     _loadingNotifier.SetProgress(

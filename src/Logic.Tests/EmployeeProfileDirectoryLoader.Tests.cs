@@ -56,6 +56,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             null,
             null,
             null,
+            null,
             CancellationToken.None);
 
         // Assert
@@ -73,6 +74,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         Func<Task> action = () => loader.LoadAsync(
             [],
             null!,
+            null,
             null,
             null,
             null,
@@ -100,7 +102,8 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 "country",
                 "officeCity",
                 "dob",
-                "employmentStartDate"
+                "employmentStartDate",
+                "customTeam"
             };
         using var cts = new CancellationTokenSource();
         var employees = CreateEmployees();
@@ -155,6 +158,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             cityField: new BambooHrField("officeCity", "Office City", null, "text"),
             birthDateField: new BambooHrField("dob", "Date of Birth", null, "date"),
             hireDateField: new BambooHrField("employmentStartDate", "Employment Start Date", null, "date"),
+            teamField: new BambooHrField("customTeam", "Team", null, "text"),
             cts.Token);
 
         // Assert
@@ -165,12 +169,14 @@ public sealed class EmployeeProfileDirectoryLoaderTests
 
         profiles[0].DisplayName.Should().Be("Alice Smith");
         profiles[0].JobTitle.Should().Be("Director Override");
+        profiles[0].Team.Should().Be("ADF Processing Team");
         profiles[0].DateOfBirth.Should().Be(new DateOnly(1980, 1, 10));
         profiles[0].HireDate.Should().Be(new DateOnly(2012, 2, 1));
         profiles[0].ManagerLookupValue.Should().Be("Alice Manager");
 
         profiles[1].DisplayName.Should().Be("Bob Jones");
         profiles[1].JobTitle.Should().Be("Manager");
+        profiles[1].Team.Should().Be("Platform Team");
         profiles[1].DateOfBirth.Should().Be(new DateOnly(2026, 3, 12));
         profiles[1].HireDate.Should().BeNull();
         profiles[1].ManagerLookupValue.Should().Be("Alice Manager");
@@ -226,7 +232,8 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 ["country"] = "Germany",
                 ["officeCity"] = "Berlin",
                 ["dob"] = "1980-01-10",
-                ["employmentStartDate"] = "2012-02-01"
+                ["employmentStartDate"] = "2012-02-01",
+                ["customTeam"] = "ADF Processing Team"
             });
 
     private static EmployeeFieldValues CreateEmployeeTwoFieldValues()
@@ -240,7 +247,8 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 ["workLocation"] = "Munich, Germany",
                 ["country"] = "Germany",
                 ["officeCity"] = "Munich",
-                ["dob"] = "2026-03-12 08:30:00"
+                ["dob"] = "2026-03-12 08:30:00",
+                ["customTeam"] = "Platform Team"
             });
 
 }

@@ -63,9 +63,9 @@ public sealed class CsvReportRendererTests
 
             // Assert
             File.Exists(expectedOutputPath).Should().BeTrue();
-            File.ReadAllText(expectedOutputPath).Should().Contain("Employee Name,Email");
-            File.ReadAllText(expectedOutputPath).Should().Contain("Alice & Smith,alice@example.com");
-            File.ReadAllText(expectedOutputPath).Should().Contain("Bob Jones,bob@example.com");
+            File.ReadAllText(expectedOutputPath).Should().Contain("Employee Name,Email,Team");
+            File.ReadAllText(expectedOutputPath).Should().Contain("Alice & Smith,alice@example.com,Leadership Team");
+            File.ReadAllText(expectedOutputPath).Should().Contain("Bob Jones,bob@example.com,ADF Processing Team");
         }
         finally
         {

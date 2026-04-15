@@ -58,7 +58,8 @@ public sealed class HierarchyReportBuilderTests
             countryField,
             cityField,
             birthDateField,
-            hireDateField);
+            hireDateField,
+            CreateField("team", "Team"));
         var employees = new[]
         {
             CreateEmployee(1, "Alice Smith", "Director"),
@@ -102,7 +103,8 @@ public sealed class HierarchyReportBuilderTests
             dateOfBirth: new DateOnly(1985, 5, 5),
             employmentStartDate: new DateOnly(2018, 1, 1),
             managerName: null,
-            []);
+            [],
+            team: "Leadership Team");
         var childRow = new HierarchyReportRow(
             level: 1,
             childEmployeeId,
@@ -113,7 +115,8 @@ public sealed class HierarchyReportBuilderTests
             dateOfBirth: new DateOnly(1992, 8, 14),
             employmentStartDate: new DateOnly(2024, 6, 1),
             managerName: "Alice Smith",
-            [CreateTimeOffEntry(200, 2, "Bob Jones", 2026, 4, 2, 2026, 4, 2)]);
+            [CreateTimeOffEntry(200, 2, "Bob Jones", 2026, 4, 2, 2026, 4, 2)],
+            team: "ADF Processing Team");
         IReadOnlyList<HierarchyReportRow> recentHires = [childRow];
         IReadOnlyList<HierarchyTeam> teams =
         [
@@ -196,6 +199,7 @@ public sealed class HierarchyReportBuilderTests
                 It.Is<BambooHrField?>(value => value == cityField),
                 It.Is<BambooHrField?>(value => value == birthDateField),
                 It.Is<BambooHrField?>(value => value == hireDateField),
+                It.Is<BambooHrField?>(value => value == fieldSelection.TeamField),
                 It.Is<CancellationToken>(token => token == cts.Token)))
             .Callback(() => loadProfilesCalls++)
             .ReturnsAsync(profiles);
@@ -351,7 +355,7 @@ public sealed class HierarchyReportBuilderTests
             new DateOnly(2026, 4, 1),
             new DateOnly(2026, 4, 8));
         var relationshipField = new HierarchyRelationshipField("reportsTo", "Reports To", usesEmployeeId: false);
-        var fieldSelection = new HierarchyFieldSelection(relationshipField, null, null, null, null, null);
+        var fieldSelection = new HierarchyFieldSelection(relationshipField, null, null, null, null, null, null);
         var employees = new[] { CreateEmployee(2, "Bob Jones", "Engineer") };
         IReadOnlyList<EmployeeProfile> profiles = [CreateProfile(2, "Bob Jones", "Engineer", managerDisplayName: "Alice Smith")];
 
@@ -381,6 +385,7 @@ public sealed class HierarchyReportBuilderTests
         employeeProfileDirectoryLoader.Setup(loader => loader.LoadAsync(
                 It.Is<IReadOnlyList<BasicEmployee>>(value => ReferenceEquals(value, employees)),
                 It.Is<HierarchyRelationshipField>(value => ReferenceEquals(value, relationshipField)),
+                It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
@@ -497,7 +502,8 @@ public sealed class HierarchyReportBuilderTests
             dateOfBirth: employeeId == 1 ? new DateOnly(1985, 5, 5) : new DateOnly(1992, 8, 14),
             hireDate: employeeId == 1 ? new DateOnly(2018, 1, 1) : new DateOnly(2024, 6, 1),
             workEmail: $"employee{employeeId}@example.com",
-            manager: ManagerReference.Parse(managerDisplayName));
+            manager: ManagerReference.Parse(managerDisplayName),
+            team: employeeId == 1 ? "Leadership Team" : "ADF Processing Team");
     }
 
     private static BambooHrField CreateField(string requestKey, string displayName)

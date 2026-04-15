@@ -19,7 +19,8 @@ public sealed class HierarchyReportRow
         DateOnly? employmentStartDate,
         string? managerName,
         IReadOnlyList<TimeOffEntry> unavailabilityEntries,
-        string? workEmail = null)
+        string? workEmail = null,
+        string? team = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(level);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -29,6 +30,7 @@ public sealed class HierarchyReportRow
         EmployeeId = employeeId;
         DisplayName = displayName;
         Department = string.IsNullOrWhiteSpace(department) ? null : department;
+        Team = string.IsNullOrWhiteSpace(team) ? null : team;
         JobTitle = string.IsNullOrWhiteSpace(jobTitle) ? null : jobTitle;
         Location = string.IsNullOrWhiteSpace(location) ? null : location;
         DateOfBirth = dateOfBirth;
@@ -57,6 +59,11 @@ public sealed class HierarchyReportRow
     /// Gets department.
     /// </summary>
     public string? Department { get; }
+
+    /// <summary>
+    /// Gets team.
+    /// </summary>
+    public string? Team { get; }
 
     /// <summary>
     /// Gets job title.

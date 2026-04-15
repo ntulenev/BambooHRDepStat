@@ -26,11 +26,12 @@ public sealed class CsvReportFileStore
             append: false,
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-        writer.WriteLine("Employee Name,Email");
+        writer.WriteLine("Employee Name,Email,Team");
 
         foreach (var row in rows)
         {
-            writer.WriteLine($"{Escape(row.DisplayName)},{Escape(row.WorkEmail ?? string.Empty)}");
+            writer.WriteLine(
+                $"{Escape(row.DisplayName)},{Escape(row.WorkEmail ?? string.Empty)},{Escape(row.Team ?? string.Empty)}");
         }
     }
 

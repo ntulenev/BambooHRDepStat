@@ -70,7 +70,7 @@ public sealed class HtmlContentComposer
 
         if (rows.Count == 0)
         {
-            return """              <tr><td class="empty" colspan="9">No hierarchy data.</td></tr>""";
+            return """              <tr><td class="empty" colspan="10">No hierarchy data.</td></tr>""";
         }
 
         var html = new StringBuilder(rows.Count * 320);
@@ -84,6 +84,7 @@ public sealed class HtmlContentComposer
                 $@"              <tr>
                 <td style=""padding-left:{padding}px""><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
                 <td>{Encode(row.Department ?? "-")}</td>
+                <td>{Encode(row.Team ?? "-")}</td>
                 <td>{Encode(row.JobTitle ?? "-")}</td>
                 <td>{Encode(row.Location ?? "-")}</td>
                 <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
@@ -150,7 +151,7 @@ public sealed class HtmlContentComposer
 
         if (rows.Count == 0)
         {
-            return """              <tr><td class="empty" colspan="8">No employees joined during the configured period.</td></tr>""";
+            return """              <tr><td class="empty" colspan="10">No employees joined during the configured period.</td></tr>""";
         }
 
         var html = new StringBuilder(rows.Count * 256);
@@ -163,6 +164,7 @@ public sealed class HtmlContentComposer
                 $@"              <tr>
                 <td><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
                 <td>{Encode(row.Department ?? "-")}</td>
+                <td>{Encode(row.Team ?? "-")}</td>
                 <td>{Encode(row.JobTitle ?? "-")}</td>
                 <td>{Encode(row.Location ?? "-")}</td>
                 <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>

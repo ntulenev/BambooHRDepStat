@@ -38,7 +38,8 @@ public sealed class HierarchyFieldResolverTests
             CreateField("countryName", "Country"),
             CreateField("officeCity", "Office City"),
             CreateField("birthday", "Birthday"),
-            CreateField("employmentStartDate", "Employment Start Date")
+            CreateField("employmentStartDate", "Employment Start Date"),
+            CreateField("division", "Division")
         };
 
         bambooHrClient.Setup(client => client.GetFieldsAsync(
@@ -81,6 +82,7 @@ public sealed class HierarchyFieldResolverTests
         selection.CityField!.RequestKey.Should().Be("officeCity");
         selection.BirthDateField!.RequestKey.Should().Be("birthday");
         selection.HireDateField!.RequestKey.Should().Be("employmentStartDate");
+        selection.TeamField!.RequestKey.Should().Be("division");
         getFieldsCalls.Should().Be(1);
         getEmployeeFieldsCalls.Should().Be(1);
     }
@@ -97,7 +99,8 @@ public sealed class HierarchyFieldResolverTests
         var fields = new[]
         {
             CreateField("customReportsToId", "Reports To Identifier"),
-            CreateField("location", "Location")
+            CreateField("location", "Location"),
+            CreateField("teamName", "Team")
         };
 
         bambooHrClient.Setup(client => client.GetFieldsAsync(
@@ -133,6 +136,7 @@ public sealed class HierarchyFieldResolverTests
         selection.RelationshipField.DisplayName.Should().Be("Reports To Identifier");
         selection.RelationshipField.UsesEmployeeId.Should().BeTrue();
         selection.LocationField!.RequestKey.Should().Be("location");
+        selection.TeamField!.RequestKey.Should().Be("teamName");
         getFieldsCalls.Should().Be(1);
         getEmployeeFieldsCalls.Should().Be(1);
     }
