@@ -38,6 +38,11 @@ public sealed class BambooHrOptions
     public int RecentHirePeriodDays { get; set; } = 30;
 
     /// <summary>
+    /// Gets or sets whether flat team report sections should be rendered.
+    /// </summary>
+    public bool ShowTeamReports { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets explicit holiday to country mappings used for availability.
     /// </summary>
     public Dictionary<string, string[]> HolidayCountryMappings { get; } = new(StringComparer.OrdinalIgnoreCase);

@@ -68,6 +68,13 @@ public sealed class PdfContentComposer
             container,
             "Company Tenure Distribution",
             _formatter.OrderCounts(report.Distributions.TenureCounts)));
+        if (report.ShowTeamReports)
+        {
+            column.Item().Element(container => ComposeFlatTeamReportsSection(
+                container,
+                report.Summaries.Teams,
+                report.Overview.GeneratedAt));
+        }
     }
 
     private static void ComposeStatCard(
@@ -409,6 +416,93 @@ public sealed class PdfContentComposer
                     }
                 });
             });
+    }
+
+    private void ComposeFlatTeamReportsSection(
+        IContainer container,
+        IReadOnlyList<HierarchyTeam> teams,
+        DateTimeOffset generatedAt)
+    {
+        ComposeSection(container, "Flat Team Reports", content =>
+        {
+            if (teams.Count == 0)
+            {
+                _ = content.Text("No teams found.").Italic().FontColor("#6B7467");
+                return;
+            }
+
+            content.Column(column =>
+            {
+                column.Spacing(12);
+
+                foreach (var team in teams)
+                {
+                    _ = column.Item().Text($"{team.ManagerDisplayName}'s Team")
+                        .Bold()
+                        .FontSize(10)
+                        .FontColor("#435343");
+                    column.Item().Element(teamContainer =>
+                        ComposeFlatTeamTable(teamContainer, team.Rows, generatedAt));
+                }
+            });
+        });
+    }
+
+    private void ComposeFlatTeamTable(
+        IContainer container,
+        IReadOnlyList<HierarchyReportRow> rows,
+        DateTimeOffset generatedAt)
+    {
+        container.Table(table =>
+        {
+            var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
+
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(1.8f);
+                columns.RelativeColumn(1f);
+                columns.RelativeColumn(1f);
+                columns.RelativeColumn(1.3f);
+                columns.RelativeColumn(1.2f);
+                columns.RelativeColumn(0.9f);
+                columns.RelativeColumn(0.7f);
+                columns.RelativeColumn(0.9f);
+                columns.RelativeColumn(1.1f);
+                columns.RelativeColumn(1.2f);
+            });
+
+            table.Header(header =>
+            {
+                ComposeHeaderCell(header.Cell(), "Employee");
+                ComposeHeaderCell(header.Cell(), "Department");
+                ComposeHeaderCell(header.Cell(), "Team");
+                ComposeHeaderCell(header.Cell(), "Job Title");
+                ComposeHeaderCell(header.Cell(), "Location");
+                ComposeHeaderCell(header.Cell(), "Birth");
+                ComposeHeaderCell(header.Cell(), "Age");
+                ComposeHeaderCell(header.Cell(), "Start");
+                ComposeHeaderCell(header.Cell(), "Manager");
+                ComposeHeaderCell(header.Cell(), "Availability");
+            });
+
+            foreach (var row in rows)
+            {
+                ComposeBodyCell(
+                    table.Cell(),
+                    $"{row.DisplayName} (#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})");
+                ComposeBodyCell(table.Cell(), row.Department ?? "-");
+                ComposeBodyCell(table.Cell(), row.Team ?? "-");
+                ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
+                ComposeBodyCell(table.Cell(), row.Location ?? "-");
+                ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
+                ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
+                ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));
+                ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
+                ComposeBodyCell(
+                    table.Cell(),
+                    _formatter.FormatAvailability(row.UnavailabilityEntries, referenceDate));
+            }
+        });
     }
 
     private static void ComposeSection(

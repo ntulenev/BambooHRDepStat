@@ -29,6 +29,8 @@ public sealed class ConsoleReportWriterTests
         output.Should().Contain("Job Titles");
         output.Should().Contain("Location Distribution");
         output.Should().Contain("Team Grade Distribution");
+        output.Should().Contain("Flat Team Reports");
+        output.Should().Contain("Alice & Smith's Team");
     }
 
     [Fact(DisplayName = "The console writer renders empty-state sections and rejects an empty hierarchy.")]
@@ -52,6 +54,24 @@ public sealed class ConsoleReportWriterTests
         output.Should().Contain("BambooHR hierarchy report");
         output.Should().Contain("No holidays found in the availability window.");
         output.Should().Contain("Availability window:");
+    }
+
+    [Fact(DisplayName = "The console writer hides flat team report sections when they are disabled in the report.")]
+    [Trait("Category", "Unit")]
+    public void RenderShouldHideFlatTeamReportsWhenDisabled()
+    {
+        // Arrange
+        using var scope = new ConsoleStackTestScope();
+        var writer = new ConsoleReportWriter(new ReportPresentationFormatter());
+        var report = CreateReport(showTeamReports: false);
+
+        // Act
+        writer.Render(report);
+        var output = string.Join(Environment.NewLine, scope.Console.Lines);
+
+        // Assert
+        output.Should().NotContain("Flat Team Reports");
+        output.Should().Contain("Team Grade Distribution");
     }
 
     private static HierarchyReport CreateEmptyStateReport()
@@ -78,5 +98,19 @@ public sealed class ConsoleReportWriterTests
                 new Dictionary<string, IReadOnlyDictionary<string, int>>(StringComparer.OrdinalIgnoreCase),
                 new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
                 new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)));
+    }
+
+    private static HierarchyReport CreateReport(bool showTeamReports)
+    {
+        var report = ReportTestData.CreateReport();
+        return new HierarchyReport(
+            report.Overview,
+            report.Hierarchy,
+            new HierarchyReportSummaries(
+                report.Summaries.RecentHires,
+                report.Summaries.RecentHirePeriodDays,
+                report.Summaries.Teams,
+                showTeamReports),
+            report.Distributions);
     }
 }

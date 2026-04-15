@@ -116,6 +116,20 @@ public sealed class HierarchyReportTests
         value.Should().Be(30);
     }
 
+    [Fact(DisplayName = "The hierarchy report exposes the show-team-reports flag from the summaries.")]
+    [Trait("Category", "Unit")]
+    public void ShowTeamReportsShouldExposeSummariesValue()
+    {
+        // Arrange
+        var (report, _, _, _, _, _) = CreateReport(showTeamReports: false);
+
+        // Act
+        var value = report.ShowTeamReports;
+
+        // Assert
+        value.Should().BeFalse();
+    }
+
     [Fact(DisplayName = "The hierarchy report exposes location counts from the distributions section.")]
     [Trait("Category", "Unit")]
     public void LocationCountsShouldExposeDistributionValue()
@@ -178,7 +192,7 @@ public sealed class HierarchyReportTests
         HierarchyRelationshipField RelationshipField,
         IReadOnlyList<HolidayReportItem> Holidays,
         IReadOnlyList<HierarchyReportRow> Rows,
-        IReadOnlyList<HierarchyTeam> Teams) CreateReport()
+        IReadOnlyList<HierarchyTeam> Teams) CreateReport(bool showTeamReports = true)
     {
         var availabilityWindow = new AvailabilityWindow(
             new DateOnly(2026, 4, 1),
@@ -216,7 +230,8 @@ public sealed class HierarchyReportTests
                 new EmployeeId(1),
                 "Alice Smith",
                 ["Bob Jones"],
-                new Dictionary<string, int> { ["Director"] = 1, ["Engineer"] = 1 })
+                new Dictionary<string, int> { ["Director"] = 1, ["Engineer"] = 1 },
+                rows)
         ];
         var report = new HierarchyReport(
             new HierarchyReportOverview(
@@ -225,7 +240,7 @@ public sealed class HierarchyReportTests
                 "Alice Smith",
                 relationshipField),
             new HierarchyReportHierarchy(holidays, rows),
-            new HierarchyReportSummaries(rows, 30, teams),
+            new HierarchyReportSummaries(rows, 30, teams, showTeamReports),
             new HierarchyReportDistributions(
                 new Dictionary<string, int> { ["Germany"] = 1 },
                 new Dictionary<string, IReadOnlyDictionary<string, int>>

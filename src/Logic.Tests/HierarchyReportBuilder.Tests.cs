@@ -128,7 +128,8 @@ public sealed class HierarchyReportBuilderTests
                 {
                     ["Director"] = 1,
                     ["Engineer"] = 1
-                })
+                },
+                [rootRow, childRow])
         ];
         Dictionary<string, int> locationCounts = new(StringComparer.OrdinalIgnoreCase)
         {

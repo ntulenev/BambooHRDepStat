@@ -56,6 +56,9 @@ public sealed class HtmlContentComposer
                 ["__COUNTRY_CITY_SECTIONS__"] = BuildCountryCitySections(report.Distributions.CountryCityCounts),
                 ["__AGE_CARDS__"] = BuildDistributionCards(report.Distributions.AgeCounts, warm: true),
                 ["__TENURE_CARDS__"] = BuildDistributionCards(report.Distributions.TenureCounts, warm: true),
+                ["__TEAM_REPORT_PANEL__"] = report.ShowTeamReports
+                    ? BuildFlatTeamReportPanel(report.Summaries.Teams, report.Overview.GeneratedAt)
+                    : string.Empty,
                 ["__RECENT_HIRE_TITLE__"] = Encode(
                     _formatter.BuildRecentHireSectionTitle(report.Summaries.RecentHirePeriodDays)),
                 ["__RECENT_HIRE_ROWS__"] = BuildRecentHireRows(report.Summaries.RecentHires, report.Overview.GeneratedAt)
@@ -206,6 +209,93 @@ public sealed class HtmlContentComposer
         }
 
         _ = html.AppendLine("""          </div>""");
+        return html.ToString();
+    }
+
+    private string BuildFlatTeamReportPanel(
+        IReadOnlyList<HierarchyTeam> teams,
+        DateTimeOffset generatedAt)
+    {
+        return $@"    <section class=""panel"">
+      <h2>Flat Team Reports</h2>
+{BuildFlatTeamReportSections(teams, generatedAt)}
+    </section>";
+    }
+
+    private string BuildFlatTeamReportSections(
+        IReadOnlyList<HierarchyTeam> teams,
+        DateTimeOffset generatedAt)
+    {
+        ArgumentNullException.ThrowIfNull(teams);
+
+        if (teams.Count == 0)
+        {
+            return """      <p class="empty">No teams found.</p>""";
+        }
+
+        var html = new StringBuilder(teams.Count * 1024);
+        foreach (var team in teams)
+        {
+            _ = html.AppendLine(
+                CultureInfo.InvariantCulture,
+                $@"      <section class=""country-card"">
+        <div class=""distribution-name"">{Encode(team.ManagerDisplayName)}'s Team</div>
+        <table style=""margin-top:16px"">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Team</th>
+              <th>Job Title</th>
+              <th>Location</th>
+              <th>Birth Date</th>
+              <th>Age</th>
+              <th>Employment Start</th>
+              <th>Manager</th>
+              <th>Availability</th>
+            </tr>
+          </thead>
+          <tbody>
+{BuildFlatTeamTableRows(team.Rows, generatedAt)}          </tbody>
+        </table>
+      </section>");
+        }
+
+        return html.ToString();
+    }
+
+    private string BuildFlatTeamTableRows(
+        IReadOnlyList<HierarchyReportRow> rows,
+        DateTimeOffset generatedAt)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        if (rows.Count == 0)
+        {
+            return """            <tr><td class="empty" colspan="10">No team data.</td></tr>""";
+        }
+
+        var html = new StringBuilder(rows.Count * 320);
+        var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
+
+        foreach (var row in rows)
+        {
+            _ = html.AppendLine(
+                CultureInfo.InvariantCulture,
+                $@"            <tr>
+              <td><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
+              <td>{Encode(row.Department ?? "-")}</td>
+              <td>{Encode(row.Team ?? "-")}</td>
+              <td>{Encode(row.JobTitle ?? "-")}</td>
+              <td>{Encode(row.Location ?? "-")}</td>
+              <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
+              <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
+              <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>
+              <td>{Encode(row.ManagerName ?? "-")}</td>
+              <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries, referenceDate)}</td>
+            </tr>");
+        }
+
         return html.ToString();
     }
 

@@ -95,6 +95,11 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         WriteDistributionSection("Age Distribution", report.Distributions.AgeCounts);
         AnsiConsole.WriteLine();
         WriteDistributionSection("Company Tenure Distribution", report.Distributions.TenureCounts);
+        if (report.ShowTeamReports)
+        {
+            AnsiConsole.WriteLine();
+            WriteFlatTeamReports(report.Summaries.Teams, referenceDate);
+        }
     }
 
     private string FormatUnavailability(
@@ -377,6 +382,28 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         }
     }
 
+    private void WriteFlatTeamReports(
+        IReadOnlyList<HierarchyTeam> teams,
+        DateOnly referenceDate)
+    {
+        ArgumentNullException.ThrowIfNull(teams);
+
+        AnsiConsole.MarkupLine("[bold]Flat Team Reports[/]");
+
+        if (teams.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[grey]No teams found.[/]");
+            return;
+        }
+
+        foreach (var team in teams)
+        {
+            AnsiConsole.MarkupLine($"[bold]{Escape(team.ManagerDisplayName)}'s Team[/]");
+            AnsiConsole.Write(CreateFlatHierarchyTable(team.Rows, referenceDate));
+            AnsiConsole.WriteLine();
+        }
+    }
+
     private void WriteRecentHires(
         HierarchyReportSummaries summaries,
         DateOnly referenceDate)
@@ -421,6 +448,43 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
 
         AnsiConsole.Write(table);
     }
+
+    private Table CreateFlatHierarchyTable(
+        IReadOnlyList<HierarchyReportRow> rows,
+        DateOnly referenceDate)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+
+        var table = new Table().Border(TableBorder.Rounded);
+        _ = table.AddColumn("Employee");
+        _ = table.AddColumn("Department");
+        _ = table.AddColumn("Team");
+        _ = table.AddColumn("Job Title");
+        _ = table.AddColumn("Location");
+        _ = table.AddColumn("Birth Date");
+        _ = table.AddColumn("Age");
+        _ = table.AddColumn("Employment Start");
+        _ = table.AddColumn("Manager");
+        _ = table.AddColumn("Availability");
+
+        foreach (var row in rows)
+        {
+            _ = table.AddRow(
+                $"{Escape(row.DisplayName)} (#{row.EmployeeId})",
+                Escape(row.Department ?? "-"),
+                Escape(row.Team ?? "-"),
+                Escape(row.JobTitle ?? "-"),
+                Escape(row.Location ?? "-"),
+                Escape(FormatDate(row.DateOfBirth)),
+                Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate)),
+                Escape(FormatDate(row.EmploymentStartDate)),
+                Escape(row.ManagerName ?? "-"),
+                Escape(_formatter.FormatAvailability(row.UnavailabilityEntries, referenceDate)));
+        }
+
+        return table;
+    }
+
     private string FormatDate(DateOnly? date)
     {
         return _formatter.FormatDate(date);

@@ -8,23 +8,23 @@ public sealed class HierarchyTeam
     /// <summary>
     /// Creates team summary.
     /// </summary>
-    /// <summary>
-    /// Creates team summary.
-    /// </summary>
     public HierarchyTeam(
         EmployeeId managerEmployeeId,
         string managerDisplayName,
         IReadOnlyList<string> memberDisplayNames,
-        IReadOnlyDictionary<string, int> gradeCounts)
+        IReadOnlyDictionary<string, int> gradeCounts,
+        IReadOnlyList<HierarchyReportRow> rows)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(managerDisplayName);
         ArgumentNullException.ThrowIfNull(memberDisplayNames);
         ArgumentNullException.ThrowIfNull(gradeCounts);
+        ArgumentNullException.ThrowIfNull(rows);
 
         ManagerEmployeeId = managerEmployeeId;
         ManagerDisplayName = managerDisplayName;
         MemberDisplayNames = memberDisplayNames;
         GradeCounts = gradeCounts;
+        Rows = rows;
     }
 
     /// <summary>
@@ -48,7 +48,12 @@ public sealed class HierarchyTeam
     public IReadOnlyDictionary<string, int> GradeCounts { get; }
 
     /// <summary>
+    /// Gets flat rows for the manager and included team members.
+    /// </summary>
+    public IReadOnlyList<HierarchyReportRow> Rows { get; }
+
+    /// <summary>
     /// Gets total people count including the manager.
     /// </summary>
-    public int PeopleCount => MemberDisplayNames.Count + 1;
+    public int PeopleCount => Rows.Count;
 }

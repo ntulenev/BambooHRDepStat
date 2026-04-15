@@ -33,7 +33,8 @@ var builder = Host.CreateDefaultBuilder(args)
             new EmployeeId(options.EmployeeId),
             options.AvailabilityLookaheadDays,
             options.RecentHirePeriodDays,
-            options.HolidayCountryMappings));
+            options.HolidayCountryMappings,
+            options.ShowTeamReports));
         _ = services.AddSingleton(options.Html);
         _ = services.AddSingleton(options.Pdf);
         _ = services.AddSingleton(options.Export);

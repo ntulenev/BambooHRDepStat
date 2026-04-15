@@ -14,7 +14,8 @@ public sealed class HierarchyReportSettings
         EmployeeId rootEmployeeId,
         int availabilityLookaheadDays,
         int recentHirePeriodDays,
-        IReadOnlyDictionary<string, string[]> holidayCountryMappings)
+        IReadOnlyDictionary<string, string[]> holidayCountryMappings,
+        bool showTeamReports = true)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(availabilityLookaheadDays);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(recentHirePeriodDays);
@@ -23,6 +24,7 @@ public sealed class HierarchyReportSettings
         RootEmployeeId = rootEmployeeId;
         AvailabilityLookaheadDays = availabilityLookaheadDays;
         RecentHirePeriodDays = recentHirePeriodDays;
+        ShowTeamReports = showTeamReports;
         HolidayCountryMappings = holidayCountryMappings.ToDictionary(
             pair => pair.Key,
             pair => pair.Value,
@@ -43,6 +45,11 @@ public sealed class HierarchyReportSettings
     /// Gets the recent-hire period in days.
     /// </summary>
     public int RecentHirePeriodDays { get; }
+
+    /// <summary>
+    /// Gets whether flat team report sections should be rendered.
+    /// </summary>
+    public bool ShowTeamReports { get; }
 
     /// <summary>
     /// Gets configured holiday-country mappings.

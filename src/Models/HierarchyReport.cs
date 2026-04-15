@@ -91,6 +91,11 @@ public sealed class HierarchyReport
     public IReadOnlyList<HierarchyTeam> Teams => Summaries.Teams;
 
     /// <summary>
+    /// Gets whether flat team report sections should be rendered.
+    /// </summary>
+    public bool ShowTeamReports => Summaries.ShowTeamReports;
+
+    /// <summary>
     /// Gets people counts grouped by location.
     /// </summary>
     public IReadOnlyDictionary<string, int> LocationCounts => Distributions.LocationCounts;

@@ -72,7 +72,8 @@ internal static class ReportTestData
                 {
                     ["Director"] = 1,
                     ["Senior"] = 1
-                })
+                },
+                rows)
         ];
         IReadOnlyDictionary<string, int> locationCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {

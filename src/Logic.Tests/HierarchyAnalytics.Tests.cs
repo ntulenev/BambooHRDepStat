@@ -71,6 +71,7 @@ public sealed class HierarchyAnalyticsTests
         teams.Should().HaveCount(2);
         teams[0].ManagerDisplayName.Should().Be("Alice Smith");
         teams[0].MemberDisplayNames.Should().Equal("Carol Brown");
+        teams[0].Rows.Select(row => row.DisplayName).Should().Equal("Alice Smith", "Carol Brown");
         teams[0].GradeCounts.Should().BeEquivalentTo(new Dictionary<string, int>
         {
             ["Director"] = 1,
@@ -78,6 +79,7 @@ public sealed class HierarchyAnalyticsTests
         });
         teams[1].ManagerDisplayName.Should().Be("Bob Jones");
         teams[1].MemberDisplayNames.Should().Equal("Diana White");
+        teams[1].Rows.Select(row => row.DisplayName).Should().Equal("Bob Jones", "Diana White");
         teams[1].GradeCounts.Should().BeEquivalentTo(new Dictionary<string, int>
         {
             ["Junior"] = 1,

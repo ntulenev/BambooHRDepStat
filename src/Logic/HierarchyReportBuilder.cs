@@ -152,7 +152,8 @@ public sealed class HierarchyReportBuilder : IHierarchyReportBuilder
             new HierarchyReportSummaries(
                 recentHires,
                 _settings.RecentHirePeriodDays,
-                teams),
+                teams,
+                _settings.ShowTeamReports),
             new HierarchyReportDistributions(
                 locationCounts,
                 countryCityCounts,

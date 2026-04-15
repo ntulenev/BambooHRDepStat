@@ -22,6 +22,7 @@ public sealed class HierarchyAnalytics : IHierarchyAnalytics
         var includedEmployeeIds = rows
             .Select(row => row.EmployeeId)
             .ToHashSet();
+        var rowsByEmployeeId = rows.ToDictionary(row => row.EmployeeId);
         List<HierarchyTeam> teams = [];
 
         foreach (var row in rows)
@@ -56,6 +57,13 @@ public sealed class HierarchyAnalytics : IHierarchyAnalytics
                     directReports,
                     includedEmployeeIds,
                     childrenByManager,
+                    profilesByEmployeeId),
+                BuildTeamRows(
+                    row.EmployeeId,
+                    directReports,
+                    includedEmployeeIds,
+                    childrenByManager,
+                    rowsByEmployeeId,
                     profilesByEmployeeId)));
         }
 
@@ -192,6 +200,32 @@ public sealed class HierarchyAnalytics : IHierarchyAnalytics
                 group => group.Key,
                 group => group.Count(),
                 StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Builds the flat rows rendered for one team section.
+    /// </summary>
+    private static IReadOnlyList<HierarchyReportRow> BuildTeamRows(
+        EmployeeId managerEmployeeId,
+        IEnumerable<EmployeeId> directReports,
+        HashSet<EmployeeId> includedEmployeeIds,
+        IReadOnlyDictionary<EmployeeId, IReadOnlyList<EmployeeId>> childrenByManager,
+        Dictionary<EmployeeId, HierarchyReportRow> rowsByEmployeeId,
+        IReadOnlyDictionary<EmployeeId, EmployeeProfile> profilesByEmployeeId)
+    {
+        return
+        [
+            rowsByEmployeeId[managerEmployeeId],
+            .. directReports
+                .Distinct()
+                .Where(id => includedEmployeeIds.Contains(id))
+                .Where(id => !childrenByManager.ContainsKey(id))
+                .OrderBy(
+                    id => profilesByEmployeeId[id].DisplayName,
+                    StringComparer.OrdinalIgnoreCase)
+                .ThenBy(id => id)
+                .Select(id => rowsByEmployeeId[id])
+        ];
     }
 
     /// <summary>

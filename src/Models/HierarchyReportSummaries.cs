@@ -11,7 +11,8 @@ public sealed class HierarchyReportSummaries
     public HierarchyReportSummaries(
         IReadOnlyList<HierarchyReportRow> recentHires,
         int recentHirePeriodDays,
-        IReadOnlyList<HierarchyTeam> teams)
+        IReadOnlyList<HierarchyTeam> teams,
+        bool showTeamReports = true)
     {
         ArgumentNullException.ThrowIfNull(recentHires);
         ArgumentNullException.ThrowIfNull(teams);
@@ -20,6 +21,7 @@ public sealed class HierarchyReportSummaries
         RecentHires = recentHires;
         RecentHirePeriodDays = recentHirePeriodDays;
         Teams = teams;
+        ShowTeamReports = showTeamReports;
     }
 
     /// <summary>
@@ -36,4 +38,9 @@ public sealed class HierarchyReportSummaries
     /// Gets manager-led teams built from leaf direct reports.
     /// </summary>
     public IReadOnlyList<HierarchyTeam> Teams { get; }
+
+    /// <summary>
+    /// Gets whether flat team report sections should be rendered.
+    /// </summary>
+    public bool ShowTeamReports { get; }
 }
