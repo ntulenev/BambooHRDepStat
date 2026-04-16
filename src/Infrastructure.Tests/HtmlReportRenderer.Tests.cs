@@ -1,5 +1,7 @@
 using FluentAssertions;
 
+using Moq;
+
 using Models;
 
 namespace Infrastructure.Tests;
@@ -15,6 +17,7 @@ public sealed class HtmlReportRendererTests
         var outputDirectory = Path.Combine(Path.GetTempPath(), "BambooHRDepStat.Tests", Guid.NewGuid().ToString("N"));
         var configuredPath = Path.Combine(outputDirectory, "report.html");
         var localNow = new DateTimeOffset(2026, 4, 1, 9, 30, 0, TimeSpan.Zero);
+        var reportFileLauncher = new Mock<Abstractions.IReportFileLauncher>(MockBehavior.Strict);
         var options = new HtmlReportOptions
         {
             Enabled = true,
@@ -26,7 +29,7 @@ public sealed class HtmlReportRendererTests
             new FakeTimeProvider(localNow),
             new HtmlReportFileStore(),
             new HtmlContentComposer(new ReportPresentationFormatter()),
-            new HtmlReportLauncher());
+            reportFileLauncher.Object);
         var expectedOutputPath = Path.Combine(outputDirectory, "report_20260401_093000.html");
 
         try
@@ -37,6 +40,9 @@ public sealed class HtmlReportRendererTests
             // Assert
             File.Exists(expectedOutputPath).Should().BeTrue();
             File.ReadAllText(expectedOutputPath).Should().Contain("Alice &amp; Smith");
+            reportFileLauncher.Verify(
+                launcher => launcher.Open(It.IsAny<string>()),
+                Times.Never);
         }
         finally
         {

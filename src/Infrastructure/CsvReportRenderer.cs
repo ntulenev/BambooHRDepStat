@@ -17,15 +17,18 @@ public sealed class CsvReportRenderer : ICsvReportRenderer
     public CsvReportRenderer(
         ExportOptions options,
         TimeProvider timeProvider,
-        CsvReportFileStore csvReportFileStore)
+        CsvReportFileStore csvReportFileStore,
+        IReportFileLauncher reportFileLauncher)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(csvReportFileStore);
+        ArgumentNullException.ThrowIfNull(reportFileLauncher);
 
         _options = options;
         _timeProvider = timeProvider;
         _csvReportFileStore = csvReportFileStore;
+        _reportFileLauncher = reportFileLauncher;
     }
 
     /// <inheritdoc/>
@@ -45,6 +48,14 @@ public sealed class CsvReportRenderer : ICsvReportRenderer
 
         _csvReportFileStore.Save(outputPath, report.Rows);
         AnsiConsole.MarkupLine($"[grey]CSV export saved:[/] {Markup.Escape(outputPath)}");
+
+        if (!_options.OpenByProcess)
+        {
+            return;
+        }
+
+        _reportFileLauncher.Open(outputPath);
+        AnsiConsole.MarkupLine("[grey]CSV export opened with the default application.[/]");
     }
 
     private static readonly string DefaultOutputPath =
@@ -53,4 +64,5 @@ public sealed class CsvReportRenderer : ICsvReportRenderer
     private readonly ExportOptions _options;
     private readonly TimeProvider _timeProvider;
     private readonly CsvReportFileStore _csvReportFileStore;
+    private readonly IReportFileLauncher _reportFileLauncher;
 }

@@ -19,19 +19,19 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
         TimeProvider timeProvider,
         HtmlReportFileStore htmlReportFileStore,
         HtmlContentComposer htmlContentComposer,
-        HtmlReportLauncher htmlReportLauncher)
+        IReportFileLauncher reportFileLauncher)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(htmlReportFileStore);
         ArgumentNullException.ThrowIfNull(htmlContentComposer);
-        ArgumentNullException.ThrowIfNull(htmlReportLauncher);
+        ArgumentNullException.ThrowIfNull(reportFileLauncher);
 
         _options = options;
         _timeProvider = timeProvider;
         _htmlReportFileStore = htmlReportFileStore;
         _htmlContentComposer = htmlContentComposer;
-        _htmlReportLauncher = htmlReportLauncher;
+        _reportFileLauncher = reportFileLauncher;
     }
 
     /// <inheritdoc/>
@@ -58,7 +58,7 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
             return;
         }
 
-        _htmlReportLauncher.Open(outputPath);
+        _reportFileLauncher.Open(outputPath);
         AnsiConsole.MarkupLine("[grey]HTML report opened in default browser.[/]");
     }
 
@@ -69,5 +69,5 @@ public sealed class HtmlReportRenderer : IHtmlReportRenderer
     private readonly TimeProvider _timeProvider;
     private readonly HtmlReportFileStore _htmlReportFileStore;
     private readonly HtmlContentComposer _htmlContentComposer;
-    private readonly HtmlReportLauncher _htmlReportLauncher;
+    private readonly IReportFileLauncher _reportFileLauncher;
 }

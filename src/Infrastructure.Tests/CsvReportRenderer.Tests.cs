@@ -1,5 +1,7 @@
 using FluentAssertions;
 
+using Moq;
+
 using Models;
 
 namespace Infrastructure.Tests;
@@ -14,6 +16,7 @@ public sealed class CsvReportRendererTests
         var report = ReportTestData.CreateReport();
         var outputDirectory = CreateOutputDirectory();
         var configuredPath = Path.Combine(outputDirectory, "employees.csv");
+        var reportFileLauncher = new Mock<Abstractions.IReportFileLauncher>(MockBehavior.Strict);
         var renderer = new CsvReportRenderer(
             new ExportOptions
             {
@@ -21,7 +24,8 @@ public sealed class CsvReportRendererTests
                 OutputPath = configuredPath
             },
             new FakeTimeProvider(new DateTimeOffset(2026, 4, 1, 9, 30, 0, TimeSpan.Zero)),
-            new CsvReportFileStore());
+            new CsvReportFileStore(),
+            reportFileLauncher.Object);
 
         try
         {
@@ -31,6 +35,9 @@ public sealed class CsvReportRendererTests
             // Assert
             File.Exists(configuredPath).Should().BeFalse();
             Directory.Exists(outputDirectory).Should().BeFalse();
+            reportFileLauncher.Verify(
+                launcher => launcher.Open(It.IsAny<string>()),
+                Times.Never);
         }
         finally
         {
@@ -47,6 +54,7 @@ public sealed class CsvReportRendererTests
         var outputDirectory = CreateOutputDirectory();
         var configuredPath = Path.Combine(outputDirectory, "employees.csv");
         var expectedOutputPath = Path.Combine(outputDirectory, "employees_20260401_093000.csv");
+        var reportFileLauncher = new Mock<Abstractions.IReportFileLauncher>(MockBehavior.Strict);
         var renderer = new CsvReportRenderer(
             new ExportOptions
             {
@@ -54,7 +62,8 @@ public sealed class CsvReportRendererTests
                 OutputPath = configuredPath
             },
             new FakeTimeProvider(new DateTimeOffset(2026, 4, 1, 9, 30, 0, TimeSpan.Zero)),
-            new CsvReportFileStore());
+            new CsvReportFileStore(),
+            reportFileLauncher.Object);
 
         try
         {
@@ -66,6 +75,46 @@ public sealed class CsvReportRendererTests
             File.ReadAllText(expectedOutputPath).Should().Contain("Employee Name,Email,Team");
             File.ReadAllText(expectedOutputPath).Should().Contain("Alice & Smith,alice@example.com,Leadership Team");
             File.ReadAllText(expectedOutputPath).Should().Contain("Bob Jones,bob@example.com,ADF Processing Team");
+            reportFileLauncher.Verify(
+                launcher => launcher.Open(It.IsAny<string>()),
+                Times.Never);
+        }
+        finally
+        {
+            Cleanup(outputDirectory);
+        }
+    }
+
+    [Fact(DisplayName = "The CSV renderer opens the generated export when process launch is enabled.")]
+    [Trait("Category", "Unit")]
+    public void RenderShouldOpenCsvWhenProcessLaunchIsEnabled()
+    {
+        // Arrange
+        var report = ReportTestData.CreateReport();
+        var outputDirectory = CreateOutputDirectory();
+        var configuredPath = Path.Combine(outputDirectory, "employees.csv");
+        var expectedOutputPath = Path.Combine(outputDirectory, "employees_20260401_093000.csv");
+        var reportFileLauncher = new Mock<Abstractions.IReportFileLauncher>(MockBehavior.Strict);
+        reportFileLauncher
+            .Setup(launcher => launcher.Open(expectedOutputPath));
+        var renderer = new CsvReportRenderer(
+            new ExportOptions
+            {
+                Enabled = true,
+                OpenByProcess = true,
+                OutputPath = configuredPath
+            },
+            new FakeTimeProvider(new DateTimeOffset(2026, 4, 1, 9, 30, 0, TimeSpan.Zero)),
+            new CsvReportFileStore(),
+            reportFileLauncher.Object);
+
+        try
+        {
+            // Act
+            renderer.Render(report);
+
+            // Assert
+            reportFileLauncher.Verify(launcher => launcher.Open(expectedOutputPath), Times.Once);
         }
         finally
         {

@@ -138,6 +138,7 @@ Full config with report options:
     },
     "Export": {
       "Enabled": true,
+      "OpenByProcess": false,
       "OutputPath": "reports/bamboohr-employee-export.csv"
     }
   }
@@ -159,6 +160,7 @@ Configuration fields:
 - `Pdf.Enabled`: enable or disable PDF generation
 - `Pdf.OutputPath`: base output path for PDF report
 - `Export.Enabled`: enable or disable CSV generation
+- `Export.OpenByProcess`: open generated CSV in the default associated application
 - `Export.OutputPath`: base output path for CSV export
 
 Example for gradually improving holiday mappings:
