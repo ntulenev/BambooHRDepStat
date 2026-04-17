@@ -29,6 +29,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
     {
         ArgumentNullException.ThrowIfNull(formatter);
         _formatter = formatter;
+        _tableFactory = new ReportTableModelFactory(formatter);
     }
 
     /// <inheritdoc/>
@@ -144,19 +145,9 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
     {
         ArgumentNullException.ThrowIfNull(rows);
 
-        var table = new Table().Border(TableBorder.Rounded);
-        _ = table.AddColumn("Job Title");
-        _ = table.AddColumn("People");
-
-        foreach (var group in _formatter.GetJobTitleCounts(rows))
-        {
-            _ = table.AddRow(
-                Escape(group.Key ?? "(No title)"),
-                group.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        }
-
-        AnsiConsole.MarkupLine("[bold]Job Titles[/]");
-        AnsiConsole.Write(table);
+        WriteTable(
+            "Job Titles",
+            _tableFactory.CreateJobTitlesTable(rows));
     }
 
     private void WriteHolidays(
@@ -175,25 +166,10 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             return;
         }
 
-        var table = new Table().Border(TableBorder.Rounded);
-        _ = table.AddColumn("Holiday");
-        _ = table.AddColumn("Start");
-        _ = table.AddColumn("End");
-        _ = table.AddColumn("Countries");
-
-        foreach (var holiday in holidays)
-        {
-            _ = table.AddRow(
-                Escape(holiday.Name),
-                Escape(FormatDate(holiday.Start)),
-                Escape(FormatDate(holiday.End)),
-                Escape(_formatter.FormatAssociatedCountries(holiday.AssociatedCountries)));
-        }
-
-        AnsiConsole.Write(table);
+        AnsiConsole.Write(CreateTable(_tableFactory.CreateHolidaysTable(holidays)));
     }
 
-    private static void WriteTeams(IReadOnlyList<HierarchyTeam> teams)
+    private void WriteTeams(IReadOnlyList<HierarchyTeam> teams)
     {
         ArgumentNullException.ThrowIfNull(teams);
 
@@ -205,20 +181,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             return;
         }
 
-        var table = new Table().Border(TableBorder.Rounded);
-        _ = table.AddColumn("Team");
-        _ = table.AddColumn("People");
-        _ = table.AddColumn("Leaf Members");
-
-        foreach (var team in teams)
-        {
-            _ = table.AddRow(
-                $"{Escape(team.ManagerDisplayName)}'s Team",
-                team.PeopleCount.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                string.Join(", ", team.MemberDisplayNames.Select(Escape)));
-        }
-
-        AnsiConsole.Write(table);
+        AnsiConsole.Write(CreateTable(_tableFactory.CreateTeamsTable(teams, "Leaf Members")));
     }
 
     private static void WriteTeamSizeChart(IReadOnlyList<HierarchyTeam> teams)
@@ -290,7 +253,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         }
     }
 
-    private static void WriteDistributionSection(
+    private void WriteDistributionSection(
         string title,
         IReadOnlyDictionary<string, int> counts)
     {
@@ -310,18 +273,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             .ThenBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var table = new Table().Border(TableBorder.Rounded);
-        _ = table.AddColumn("Bucket");
-        _ = table.AddColumn("People");
-
-        foreach (var item in orderedCounts)
-        {
-            _ = table.AddRow(
-                Escape(item.Key),
-                item.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        }
-
-        AnsiConsole.Write(table);
+        AnsiConsole.Write(CreateTable(_tableFactory.CreateCountTable(counts, "No data.")));
 
         AnsiConsole.Write(CreateDistributionBarChart(title, orderedCounts));
     }
@@ -399,7 +351,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         foreach (var team in teams)
         {
             AnsiConsole.MarkupLine($"[bold]{Escape(team.ManagerDisplayName)}'s Team[/]");
-            AnsiConsole.Write(CreateFlatHierarchyTable(team.Rows, referenceDate));
+            AnsiConsole.Write(CreateTable(_tableFactory.CreateFlatTeamTable(team.Rows, ToReferenceTimestamp(referenceDate))));
             AnsiConsole.WriteLine();
         }
     }
@@ -419,74 +371,10 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
             return;
         }
 
-        var table = new Table().Border(TableBorder.Rounded);
-        _ = table.AddColumn("Employee");
-        _ = table.AddColumn("Department");
-        _ = table.AddColumn("Team");
-        _ = table.AddColumn("Job Title");
-        _ = table.AddColumn("Location");
-        _ = table.AddColumn("Birth Date");
-        _ = table.AddColumn("Age");
-        _ = table.AddColumn("Employment Start");
-        _ = table.AddColumn("Days With Us");
-        _ = table.AddColumn("Manager");
-
-        foreach (var row in summaries.RecentHires)
-        {
-            _ = table.AddRow(
-                $"{Escape(row.DisplayName)} (#{row.EmployeeId})",
-                Escape(row.Department ?? "-"),
-                Escape(row.Team ?? "-"),
-                Escape(row.JobTitle ?? "-"),
-                Escape(row.Location ?? "-"),
-                Escape(FormatDate(row.DateOfBirth)),
-                Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate)),
-                Escape(FormatDate(row.EmploymentStartDate)),
-                Escape(_formatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate)),
-                Escape(row.ManagerName ?? "-"));
-        }
-
-        AnsiConsole.Write(table);
-    }
-
-    private Table CreateFlatHierarchyTable(
-        IReadOnlyList<HierarchyReportRow> rows,
-        DateOnly referenceDate)
-    {
-        ArgumentNullException.ThrowIfNull(rows);
-
-        var table = new Table().Border(TableBorder.Rounded);
-        _ = table.AddColumn("Employee");
-        _ = table.AddColumn("Department");
-        _ = table.AddColumn("Team");
-        _ = table.AddColumn("Job Title");
-        _ = table.AddColumn("Location");
-        _ = table.AddColumn("Phone");
-        _ = table.AddColumn("Vacation Leave Available");
-        _ = table.AddColumn("Birth Date");
-        _ = table.AddColumn("Age");
-        _ = table.AddColumn("Employment Start");
-        _ = table.AddColumn("Manager");
-        _ = table.AddColumn("Availability");
-
-        foreach (var row in rows)
-        {
-            _ = table.AddRow(
-                $"{Escape(row.DisplayName)} (#{row.EmployeeId})",
-                Escape(row.Department ?? "-"),
-                Escape(row.Team ?? "-"),
-                Escape(row.JobTitle ?? "-"),
-                Escape(row.Location ?? "-"),
-                Escape(_formatter.FormatPhones(row.Phones)),
-                Escape(_formatter.FormatVacationLeaveBalance(row.VacationLeaveBalance)),
-                Escape(FormatDate(row.DateOfBirth)),
-                Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate)),
-                Escape(FormatDate(row.EmploymentStartDate)),
-                Escape(row.ManagerName ?? "-"),
-                Escape(_formatter.FormatAvailability(row.UnavailabilityEntries, referenceDate)));
-        }
-
-        return table;
+        AnsiConsole.Write(CreateTable(
+            _tableFactory.CreateRecentHiresTable(
+                summaries.RecentHires,
+                ToReferenceTimestamp(referenceDate))));
     }
 
     private string FormatDate(DateOnly? date)
@@ -494,7 +382,57 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         return _formatter.FormatDate(date);
     }
 
+    private static void WriteTable(string title, ReportTableModel table)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentNullException.ThrowIfNull(table);
+
+        AnsiConsole.MarkupLine($"[bold]{Escape(title)}[/]");
+
+        if (table.Rows.Count == 0)
+        {
+            AnsiConsole.MarkupLine($"[grey]{Escape(table.EmptyText)}[/]");
+            return;
+        }
+
+        AnsiConsole.Write(CreateTable(table));
+    }
+
+    private static Table CreateTable(ReportTableModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var table = new Table().Border(TableBorder.Rounded);
+        foreach (var column in model.Columns)
+        {
+            _ = table.AddColumn(column.Header);
+        }
+
+        foreach (var row in model.Rows)
+        {
+            _ = table.AddRow(row.Cells.Select(BuildCellText).ToArray());
+        }
+
+        return table;
+    }
+
+    private static string BuildCellText(ReportTableCell cell)
+    {
+        ArgumentNullException.ThrowIfNull(cell);
+
+        return Escape(
+            cell.SecondaryText is null
+                ? cell.Text
+                : $"{cell.Text} {cell.SecondaryText}");
+    }
+
+    private static DateTimeOffset ToReferenceTimestamp(DateOnly referenceDate)
+    {
+        return new DateTimeOffset(referenceDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+    }
+
     private static string Escape(string value) => Markup.Escape(value);
 
     private readonly IReportPresentationFormatter _formatter;
+    private readonly ReportTableModelFactory _tableFactory;
 }

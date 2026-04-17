@@ -21,6 +21,7 @@ public sealed class PdfContentComposer
     {
         ArgumentNullException.ThrowIfNull(formatter);
         _formatter = formatter;
+        _tableFactory = new ReportTableModelFactory(formatter);
     }
 
     public void ComposeContent(ColumnDescriptor column, HierarchyReport report)
@@ -50,24 +51,52 @@ public sealed class PdfContentComposer
                 _formatter.GetJobTitleCounts(report.Hierarchy.Rows).Count.ToString(CultureInfo.InvariantCulture)));
         });
 
-        column.Item().Element(container => ComposeHolidaysSection(container, report.Overview.AvailabilityWindow, report.Hierarchy.Holidays));
-        column.Item().Element(container => ComposeHierarchySection(container, report.Hierarchy.Rows, report.Overview.GeneratedAt));
-        column.Item().Element(container => ComposeRecentHiresSection(container, report.Summaries.RecentHires, report.Summaries.RecentHirePeriodDays, report.Overview.GeneratedAt));
-        column.Item().Element(container => ComposeJobTitlesSection(container, report.Hierarchy.Rows));
-        column.Item().Element(container => ComposeTeamsSection(container, report.Summaries.Teams));
-        column.Item().Element(container => ComposeDistributionSection(
+        column.Item().Element(container => ComposeTableSection(
+            container,
+            _formatter.BuildHolidaySectionTitle(report.Overview.AvailabilityWindow),
+            _tableFactory.CreateHolidaysTable(report.Hierarchy.Holidays)));
+        column.Item().Element(container => ComposeTableSection(
+            container,
+            "Hierarchy",
+            _tableFactory.CreateHierarchyTable(
+                report.Hierarchy.Rows,
+                report.Overview.GeneratedAt)));
+        column.Item().Element(container => ComposeTableSection(
+            container,
+            _formatter.BuildRecentHireSectionTitle(report.Summaries.RecentHirePeriodDays),
+            _tableFactory.CreateRecentHiresTable(
+                report.Summaries.RecentHires,
+                report.Overview.GeneratedAt)));
+        column.Item().Element(container => ComposeTableSection(
+            container,
+            "Job Titles",
+            _tableFactory.CreateJobTitlesTable(report.Hierarchy.Rows)));
+        column.Item().Element(container => ComposeTableSection(
+            container,
+            "Teams",
+            _tableFactory.CreateTeamsTable(report.Summaries.Teams)));
+        column.Item().Element(container => ComposeTableSection(
             container,
             "Location Distribution",
-            _formatter.OrderCounts(report.Distributions.LocationCounts)));
-        column.Item().Element(container => ComposeCountryCitySection(container, report.Distributions.CountryCityCounts));
-        column.Item().Element(container => ComposeDistributionSection(
+            _tableFactory.CreateCountTable(
+                report.Distributions.LocationCounts,
+                "No data.")));
+        column.Item().Element(container => ComposeTableSection(
+            container,
+            "Location By Country Cities",
+            _tableFactory.CreateCountryCityTable(report.Distributions.CountryCityCounts)));
+        column.Item().Element(container => ComposeTableSection(
             container,
             "Age Distribution",
-            _formatter.OrderCounts(report.Distributions.AgeCounts)));
-        column.Item().Element(container => ComposeDistributionSection(
+            _tableFactory.CreateCountTable(
+                report.Distributions.AgeCounts,
+                "No data.")));
+        column.Item().Element(container => ComposeTableSection(
             container,
             "Company Tenure Distribution",
-            _formatter.OrderCounts(report.Distributions.TenureCounts)));
+            _tableFactory.CreateCountTable(
+                report.Distributions.TenureCounts,
+                "No data.")));
         if (report.ShowTeamReports)
         {
             column.Item().Element(container => ComposeFlatTeamReportsSection(
@@ -96,326 +125,21 @@ public sealed class PdfContentComposer
             });
     }
 
-    private void ComposeHierarchySection(
-        IContainer container,
-        IReadOnlyList<HierarchyReportRow> rows,
-        DateTimeOffset generatedAt)
-    {
-        ComposeSection(container, "Hierarchy", content =>
-        {
-            content.Table(table =>
-            {
-                var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
-
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(2.2f);
-                    columns.RelativeColumn(1.2f);
-                    columns.RelativeColumn(1.2f);
-                    columns.RelativeColumn(1.3f);
-                    columns.RelativeColumn(1.4f);
-                    columns.RelativeColumn(0.7f);
-                    columns.RelativeColumn(0.8f);
-                    columns.RelativeColumn(0.9f);
-                    columns.RelativeColumn(1.1f);
-                    columns.RelativeColumn(1.6f);
-                });
-
-                table.Header(header =>
-                {
-                    ComposeHeaderCell(header.Cell(), "Employee");
-                    ComposeHeaderCell(header.Cell(), "Department");
-                    ComposeHeaderCell(header.Cell(), "Team");
-                    ComposeHeaderCell(header.Cell(), "Job Title");
-                    ComposeHeaderCell(header.Cell(), "Location");
-                    ComposeHeaderCell(header.Cell(), "Birth");
-                    ComposeHeaderCell(header.Cell(), "Age");
-                    ComposeHeaderCell(header.Cell(), "Start");
-                    ComposeHeaderCell(header.Cell(), "Manager");
-                    ComposeHeaderCell(header.Cell(), "Availability");
-                });
-
-                foreach (var row in rows)
-                {
-                    ComposeBodyCell(
-                        table.Cell(),
-                        _formatter.BuildHierarchyDisplayName(row),
-                        leftPadding: row.Level * 8f);
-                    ComposeBodyCell(table.Cell(), row.Department ?? "-");
-                    ComposeBodyCell(table.Cell(), row.Team ?? "-");
-                    ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
-                    ComposeBodyCell(table.Cell(), row.Location ?? "-");
-                    ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
-                    ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
-                    ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));
-                    ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
-                    ComposeBodyCell(
-                        table.Cell(),
-                        _formatter.FormatAvailability(
-                            row.UnavailabilityEntries,
-                            referenceDate));
-                }
-            });
-        });
-    }
-
-    private void ComposeHolidaysSection(
-        IContainer container,
-        AvailabilityWindow availabilityWindow,
-        IReadOnlyList<HolidayReportItem> holidays)
-    {
-        ComposeSection(
-            container,
-            _formatter.BuildHolidaySectionTitle(availabilityWindow),
-            content =>
-            {
-                if (holidays.Count == 0)
-                {
-                    _ = content.Text("No holidays found in the availability window.")
-                        .Italic()
-                        .FontColor("#6B7467");
-                    return;
-                }
-
-                content.Table(table =>
-                {
-                    table.ColumnsDefinition(columns =>
-                    {
-                        columns.RelativeColumn(2f);
-                        columns.RelativeColumn(1f);
-                        columns.RelativeColumn(1f);
-                        columns.RelativeColumn(1.5f);
-                    });
-
-                    table.Header(header =>
-                    {
-                        ComposeHeaderCell(header.Cell(), "Holiday");
-                        ComposeHeaderCell(header.Cell(), "Start");
-                        ComposeHeaderCell(header.Cell(), "End");
-                        ComposeHeaderCell(header.Cell(), "Countries");
-                    });
-
-                    foreach (var holiday in holidays)
-                    {
-                        ComposeBodyCell(table.Cell(), holiday.Name);
-                        ComposeBodyCell(table.Cell(), _formatter.FormatDate(holiday.Start));
-                        ComposeBodyCell(table.Cell(), _formatter.FormatDate(holiday.End));
-                        ComposeBodyCell(
-                            table.Cell(),
-                            _formatter.FormatAssociatedCountries(holiday.AssociatedCountries));
-                    }
-                });
-            });
-    }
-
-    private void ComposeJobTitlesSection(
-        IContainer container,
-        IReadOnlyList<HierarchyReportRow> rows)
-    {
-        ComposeDistributionSection(
-            container,
-            "Job Titles",
-            _formatter.GetJobTitleCounts(rows));
-    }
-
-    private void ComposeTeamsSection(
-        IContainer container,
-        IReadOnlyList<HierarchyTeam> teams)
-    {
-        ComposeSection(container, "Teams", content =>
-        {
-            if (teams.Count == 0)
-            {
-                _ = content.Text("No teams found.").Italic().FontColor("#6B7467");
-                return;
-            }
-
-            content.Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(1.6f);
-                    columns.ConstantColumn(54);
-                    columns.RelativeColumn(2f);
-                    columns.RelativeColumn(2f);
-                });
-
-                table.Header(header =>
-                {
-                    ComposeHeaderCell(header.Cell(), "Team");
-                    ComposeHeaderCell(header.Cell(), "People");
-                    ComposeHeaderCell(header.Cell(), "Members");
-                    ComposeHeaderCell(header.Cell(), "Grades");
-                });
-
-                foreach (var team in teams)
-                {
-                    ComposeBodyCell(table.Cell(), team.ManagerDisplayName + "'s Team");
-                    ComposeBodyCell(table.Cell(), team.PeopleCount.ToString(CultureInfo.InvariantCulture));
-                    ComposeBodyCell(table.Cell(), string.Join(", ", team.MemberDisplayNames));
-                    ComposeBodyCell(table.Cell(), _formatter.FormatGradeCounts(team.GradeCounts));
-                }
-            });
-        });
-    }
-
-    private static void ComposeDistributionSection(
+    private static void ComposeTableSection(
         IContainer container,
         string title,
-        IReadOnlyList<KeyValuePair<string, int>> counts)
+        ReportTableModel table)
     {
         ComposeSection(container, title, content =>
         {
-            if (counts.Count == 0)
+            if (table.Rows.Count == 0)
             {
-                _ = content.Text("No data.").Italic().FontColor("#6B7467");
+                _ = content.Text(table.EmptyText).Italic().FontColor("#6B7467");
                 return;
             }
 
-            content.Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(3f);
-                    columns.ConstantColumn(70);
-                });
-
-                table.Header(header =>
-                {
-                    ComposeHeaderCell(header.Cell(), "Bucket");
-                    ComposeHeaderCell(header.Cell(), "People");
-                });
-
-                foreach (var count in counts)
-                {
-                    ComposeBodyCell(table.Cell(), count.Key);
-                    ComposeBodyCell(table.Cell(), count.Value.ToString(CultureInfo.InvariantCulture));
-                }
-            });
+            ComposeTable(content, table);
         });
-    }
-
-    private void ComposeCountryCitySection(
-        IContainer container,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> countryCityCounts)
-    {
-        ComposeSection(container, "Location By Country Cities", content =>
-        {
-            var rows = countryCityCounts
-                .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
-                .SelectMany(country => _formatter.OrderCounts(country.Value)
-                    .Select(city => new
-                    {
-                        Country = country.Key,
-                        City = city.Key,
-                        People = city.Value
-                    }))
-                .ToArray();
-
-            if (rows.Length == 0)
-            {
-                _ = content.Text("No city breakdown available.").Italic().FontColor("#6B7467");
-                return;
-            }
-
-            content.Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(1.3f);
-                    columns.RelativeColumn(1.7f);
-                    columns.ConstantColumn(70);
-                });
-
-                table.Header(header =>
-                {
-                    ComposeHeaderCell(header.Cell(), "Country");
-                    ComposeHeaderCell(header.Cell(), "City");
-                    ComposeHeaderCell(header.Cell(), "People");
-                });
-
-                foreach (var row in rows)
-                {
-                    ComposeBodyCell(table.Cell(), row.Country);
-                    ComposeBodyCell(table.Cell(), row.City);
-                    ComposeBodyCell(table.Cell(), row.People.ToString(CultureInfo.InvariantCulture));
-                }
-            });
-        });
-    }
-
-    private void ComposeRecentHiresSection(
-        IContainer container,
-        IReadOnlyList<HierarchyReportRow> rows,
-        int recentHirePeriodDays,
-        DateTimeOffset generatedAt)
-    {
-        ComposeSection(
-            container,
-            _formatter.BuildRecentHireSectionTitle(recentHirePeriodDays),
-            content =>
-            {
-                if (rows.Count == 0)
-                {
-                    _ = content.Text("No employees joined during the configured period.")
-                        .Italic()
-                        .FontColor("#6B7467");
-                    return;
-                }
-
-                content.Table(table =>
-                {
-                    var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
-
-                    table.ColumnsDefinition(columns =>
-                    {
-                        columns.RelativeColumn(1.8f);
-                        columns.RelativeColumn(1f);
-                        columns.RelativeColumn(1f);
-                        columns.RelativeColumn(1.3f);
-                        columns.RelativeColumn(1.2f);
-                        columns.RelativeColumn(0.9f);
-                        columns.RelativeColumn(0.7f);
-                        columns.RelativeColumn(0.9f);
-                        columns.RelativeColumn(0.9f);
-                        columns.RelativeColumn(1.1f);
-                    });
-
-                    table.Header(header =>
-                    {
-                        ComposeHeaderCell(header.Cell(), "Employee");
-                        ComposeHeaderCell(header.Cell(), "Department");
-                        ComposeHeaderCell(header.Cell(), "Team");
-                        ComposeHeaderCell(header.Cell(), "Job Title");
-                        ComposeHeaderCell(header.Cell(), "Location");
-                        ComposeHeaderCell(header.Cell(), "Birth");
-                        ComposeHeaderCell(header.Cell(), "Age");
-                        ComposeHeaderCell(header.Cell(), "Start");
-                        ComposeHeaderCell(header.Cell(), "Days With Us");
-                        ComposeHeaderCell(header.Cell(), "Manager");
-                    });
-
-                    foreach (var row in rows)
-                    {
-                        ComposeBodyCell(
-                            table.Cell(),
-                            $"{row.DisplayName} (#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})");
-                        ComposeBodyCell(table.Cell(), row.Department ?? "-");
-                        ComposeBodyCell(table.Cell(), row.Team ?? "-");
-                        ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
-                        ComposeBodyCell(table.Cell(), row.Location ?? "-");
-                        ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
-                        ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
-                        ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));
-                        ComposeBodyCell(
-                            table.Cell(),
-                            _formatter.FormatDaysWithUs(
-                                row.EmploymentStartDate,
-                                referenceDate));
-                        ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
-                    }
-                });
-            });
     }
 
     private void ComposeFlatTeamReportsSection(
@@ -441,72 +165,47 @@ public sealed class PdfContentComposer
                         .Bold()
                         .FontSize(10)
                         .FontColor("#435343");
-                    column.Item().Element(teamContainer =>
-                        ComposeFlatTeamTable(teamContainer, team.Rows, generatedAt));
+                    var table = _tableFactory.CreateFlatTeamTable(team.Rows, generatedAt);
+                    column.Item().Element(teamContainer => ComposeTable(teamContainer, table));
                 }
             });
         });
     }
 
-    private void ComposeFlatTeamTable(
+    private static void ComposeTable(
         IContainer container,
-        IReadOnlyList<HierarchyReportRow> rows,
-        DateTimeOffset generatedAt)
+        ReportTableModel model)
     {
-        container.Table(table =>
+        container.Table(descriptor =>
         {
-            var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
-
-            table.ColumnsDefinition(columns =>
+            descriptor.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(1.8f);
-                columns.RelativeColumn(1f);
-                columns.RelativeColumn(1f);
-                columns.RelativeColumn(1.3f);
-                columns.RelativeColumn(1.2f);
-                columns.RelativeColumn(1.5f);
-                columns.RelativeColumn(1.4f);
-                columns.RelativeColumn(0.9f);
-                columns.RelativeColumn(0.7f);
-                columns.RelativeColumn(0.9f);
-                columns.RelativeColumn(1.1f);
-                columns.RelativeColumn(1.2f);
+                foreach (var column in model.Columns)
+                {
+                    if (column.IsConstantWidth)
+                    {
+                        columns.ConstantColumn(column.Width);
+                        continue;
+                    }
+
+                    columns.RelativeColumn(column.Width);
+                }
             });
 
-            table.Header(header =>
+            descriptor.Header(header =>
             {
-                ComposeHeaderCell(header.Cell(), "Employee");
-                ComposeHeaderCell(header.Cell(), "Department");
-                ComposeHeaderCell(header.Cell(), "Team");
-                ComposeHeaderCell(header.Cell(), "Job Title");
-                ComposeHeaderCell(header.Cell(), "Location");
-                ComposeHeaderCell(header.Cell(), "Phone");
-                ComposeHeaderCell(header.Cell(), "Vacation Leave Available");
-                ComposeHeaderCell(header.Cell(), "Birth");
-                ComposeHeaderCell(header.Cell(), "Age");
-                ComposeHeaderCell(header.Cell(), "Start");
-                ComposeHeaderCell(header.Cell(), "Manager");
-                ComposeHeaderCell(header.Cell(), "Availability");
+                foreach (var column in model.Columns)
+                {
+                    ComposeHeaderCell(header.Cell(), column.Header);
+                }
             });
 
-            foreach (var row in rows)
+            foreach (var row in model.Rows)
             {
-                ComposeBodyCell(
-                    table.Cell(),
-                    $"{row.DisplayName} (#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})");
-                ComposeBodyCell(table.Cell(), row.Department ?? "-");
-                ComposeBodyCell(table.Cell(), row.Team ?? "-");
-                ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
-                ComposeBodyCell(table.Cell(), row.Location ?? "-");
-                ComposeBodyCell(table.Cell(), _formatter.FormatPhones(row.Phones));
-                ComposeBodyCell(table.Cell(), _formatter.FormatVacationLeaveBalance(row.VacationLeaveBalance));
-                ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
-                ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
-                ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));
-                ComposeBodyCell(table.Cell(), row.ManagerName ?? "-");
-                ComposeBodyCell(
-                    table.Cell(),
-                    _formatter.FormatAvailability(row.UnavailabilityEntries, referenceDate));
+                foreach (var cell in row.Cells)
+                {
+                    ComposeBodyCell(descriptor.Cell(), cell);
+                }
             }
         });
     }
@@ -561,5 +260,27 @@ public sealed class PdfContentComposer
             .FontColor("#1F2A21");
     }
 
+    private static void ComposeBodyCell(
+        IContainer container,
+        ReportTableCell cell)
+    {
+        ArgumentNullException.ThrowIfNull(cell);
+
+        ComposeBodyCell(
+            container,
+            BuildCellText(cell),
+            leftPadding: cell.IndentLevel * 8f);
+    }
+
+    private static string BuildCellText(ReportTableCell cell)
+    {
+        return cell.SecondaryText is null
+            ? cell.Text
+            : string.Create(
+                CultureInfo.InvariantCulture,
+                $"{cell.Text} {cell.SecondaryText}");
+    }
+
     private readonly IReportPresentationFormatter _formatter;
+    private readonly ReportTableModelFactory _tableFactory;
 }

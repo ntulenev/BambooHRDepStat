@@ -21,6 +21,7 @@ public sealed class HtmlContentComposer
     {
         ArgumentNullException.ThrowIfNull(formatter);
         _formatter = formatter;
+        _tableFactory = new ReportTableModelFactory(formatter);
     }
 
     public string Compose(HierarchyReport report)
@@ -48,9 +49,12 @@ public sealed class HtmlContentComposer
                 ["__TEAM_SIZE_JSON__"] = BuildTeamSizeChartJson(report.Summaries.Teams),
                 ["__TEAM_GRADE_JSON__"] = BuildTeamGradeChartJson(report.Summaries.Teams),
                 ["__HOLIDAY_TITLE__"] = Encode(_formatter.BuildHolidaySectionTitle(report.Overview.AvailabilityWindow)),
-                ["__HOLIDAY_ROWS__"] = BuildHolidayRows(report.Hierarchy.Holidays),
-                ["__HIERARCHY_ROWS__"] = BuildHierarchyRows(report.Hierarchy.Rows, report.Overview.GeneratedAt),
-                ["__JOB_TITLE_ROWS__"] = BuildCountTableRows(jobTitleCounts, "No job title data."),
+                ["__HOLIDAY_ROWS__"] = BuildTableBodyRows(
+                    _tableFactory.CreateHolidaysTable(report.Hierarchy.Holidays)),
+                ["__HIERARCHY_ROWS__"] = BuildTableBodyRows(
+                    _tableFactory.CreateHierarchyTable(report.Hierarchy.Rows, report.Overview.GeneratedAt)),
+                ["__JOB_TITLE_ROWS__"] = BuildTableBodyRows(
+                    _tableFactory.CreateJobTitlesTable(report.Hierarchy.Rows)),
                 ["__TEAM_CARDS__"] = BuildTeamCards(report.Summaries.Teams),
                 ["__LOCATION_CARDS__"] = BuildDistributionCards(report.Distributions.LocationCounts, warm: false),
                 ["__COUNTRY_CITY_SECTIONS__"] = BuildCountryCitySections(report.Distributions.CountryCityCounts),
@@ -61,124 +65,84 @@ public sealed class HtmlContentComposer
                     : string.Empty,
                 ["__RECENT_HIRE_TITLE__"] = Encode(
                     _formatter.BuildRecentHireSectionTitle(report.Summaries.RecentHirePeriodDays)),
-                ["__RECENT_HIRE_ROWS__"] = BuildRecentHireRows(report.Summaries.RecentHires, report.Overview.GeneratedAt)
+                ["__RECENT_HIRE_ROWS__"] = BuildTableBodyRows(
+                    _tableFactory.CreateRecentHiresTable(
+                        report.Summaries.RecentHires,
+                        report.Overview.GeneratedAt))
             });
     }
 
-    private string BuildHierarchyRows(
-        IReadOnlyList<HierarchyReportRow> rows,
-        DateTimeOffset generatedAt)
+    private static string BuildTableBodyRows(ReportTableModel table)
     {
-        ArgumentNullException.ThrowIfNull(rows);
+        ArgumentNullException.ThrowIfNull(table);
 
-        if (rows.Count == 0)
+        if (table.Rows.Count == 0)
         {
-            return """              <tr><td class="empty" colspan="10">No hierarchy data.</td></tr>""";
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"""              <tr><td class="empty" colspan="{table.Columns.Count}">{Encode(table.EmptyText)}</td></tr>""");
         }
 
-        var html = new StringBuilder(rows.Count * 320);
-        var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
-
-        foreach (var row in rows)
+        var html = new StringBuilder(table.Rows.Count * 320);
+        foreach (var row in table.Rows)
         {
-            var padding = row.Level * 20;
-            _ = html.AppendLine(
-                CultureInfo.InvariantCulture,
-                $@"              <tr>
-                <td style=""padding-left:{padding}px""><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
-                <td>{Encode(row.Department ?? "-")}</td>
-                <td>{Encode(row.Team ?? "-")}</td>
-                <td>{Encode(row.JobTitle ?? "-")}</td>
-                <td>{Encode(row.Location ?? "-")}</td>
-                <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
-                <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
-                <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>
-                <td>{Encode(row.ManagerName ?? "-")}</td>
-                <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries, referenceDate)}</td>
-              </tr>");
+            _ = html.AppendLine("""              <tr>""");
+
+            foreach (var cell in row.Cells)
+            {
+                var padding = cell.IndentLevel * 20;
+                var style = padding == 0
+                    ? string.Empty
+                    : $" style=\"padding-left:{padding}px\"";
+                _ = html.AppendLine(
+                    CultureInfo.InvariantCulture,
+                    $"""                <td{style}>{BuildCellMarkup(cell)}</td>""");
+            }
+
+            _ = html.AppendLine("""              </tr>""");
         }
 
         return html.ToString();
     }
 
-    private static string BuildCountTableRows(
-        IReadOnlyList<KeyValuePair<string, int>> counts,
-        string emptyText)
+    private static string BuildTableHeaderCells(IReadOnlyList<ReportTableColumn> columns)
     {
-        if (counts.Count == 0)
-        {
-            return $@"              <tr><td class=""empty"" colspan=""2"">{Encode(emptyText)}</td></tr>";
-        }
+        ArgumentNullException.ThrowIfNull(columns);
 
-        var html = new StringBuilder(counts.Count * 96);
-        foreach (var pair in counts)
+        var html = new StringBuilder(columns.Count * 32);
+        foreach (var column in columns)
         {
             _ = html.AppendLine(
                 CultureInfo.InvariantCulture,
-                $@"              <tr><td>{Encode(pair.Key)}</td><td>{pair.Value.ToString(CultureInfo.InvariantCulture)}</td></tr>");
+                $"""              <th>{Encode(column.Header)}</th>""");
         }
 
         return html.ToString();
     }
 
-    private string BuildHolidayRows(IReadOnlyList<HolidayReportItem> holidays)
+    private static string BuildCellMarkup(ReportTableCell cell)
     {
-        ArgumentNullException.ThrowIfNull(holidays);
+        ArgumentNullException.ThrowIfNull(cell);
 
-        if (holidays.Count == 0)
+        if (cell.AvailabilityState is ReportAvailabilityState availabilityState)
         {
-            return """              <tr><td class="empty" colspan="4">No holidays found in the availability window.</td></tr>""";
+            return BuildAvailabilityMarkup(cell.Text, availabilityState);
         }
 
-        var html = new StringBuilder(holidays.Count * 140);
-        foreach (var holiday in holidays)
+        var html = new StringBuilder(Encode(cell.Text));
+        if (cell.SecondaryText is not null)
         {
-            _ = html.AppendLine(
-                CultureInfo.InvariantCulture,
-                $@"              <tr>
-                <td>{Encode(holiday.Name)}</td>
-                <td>{Encode(_formatter.FormatDate(holiday.Start))}</td>
-                <td>{Encode(_formatter.FormatDate(holiday.End))}</td>
-                <td>{Encode(_formatter.FormatAssociatedCountries(holiday.AssociatedCountries))}</td>
-              </tr>");
+            _ = html.Append(""" <span class="muted">""");
+            _ = html.Append(Encode(cell.SecondaryText));
+            _ = html.Append("</span>");
         }
 
-        return html.ToString();
-    }
-
-    private string BuildRecentHireRows(
-        IReadOnlyList<HierarchyReportRow> rows,
-        DateTimeOffset generatedAt)
-    {
-        ArgumentNullException.ThrowIfNull(rows);
-
-        if (rows.Count == 0)
+        if (!cell.IsEmphasized)
         {
-            return """              <tr><td class="empty" colspan="10">No employees joined during the configured period.</td></tr>""";
+            return html.ToString();
         }
 
-        var html = new StringBuilder(rows.Count * 256);
-        var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
-
-        foreach (var row in rows)
-        {
-            _ = html.AppendLine(
-                CultureInfo.InvariantCulture,
-                $@"              <tr>
-                <td><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
-                <td>{Encode(row.Department ?? "-")}</td>
-                <td>{Encode(row.Team ?? "-")}</td>
-                <td>{Encode(row.JobTitle ?? "-")}</td>
-                <td>{Encode(row.Location ?? "-")}</td>
-                <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
-                <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
-                <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>
-                <td>{Encode(_formatter.FormatDaysWithUs(row.EmploymentStartDate, referenceDate))}</td>
-                <td>{Encode(row.ManagerName ?? "-")}</td>
-              </tr>");
-        }
-
-        return html.ToString();
+        return $@"<strong>{html}</strong>";
     }
 
     private static string BuildTeamCards(IReadOnlyList<HierarchyTeam> teams)
@@ -236,6 +200,7 @@ public sealed class HtmlContentComposer
         var html = new StringBuilder(teams.Count * 1024);
         foreach (var team in teams)
         {
+            var table = _tableFactory.CreateFlatTeamTable(team.Rows, generatedAt);
             _ = html.AppendLine(
                 CultureInfo.InvariantCulture,
                 $@"      <section class=""country-card"">
@@ -243,61 +208,12 @@ public sealed class HtmlContentComposer
         <table style=""margin-top:16px"">
           <thead>
             <tr>
-              <th>Employee</th>
-              <th>Department</th>
-              <th>Team</th>
-              <th>Job Title</th>
-              <th>Location</th>
-              <th>Phone</th>
-              <th>Vacation Leave Available</th>
-              <th>Birth Date</th>
-              <th>Age</th>
-              <th>Employment Start</th>
-              <th>Manager</th>
-              <th>Availability</th>
-            </tr>
+{BuildTableHeaderCells(table.Columns)}            </tr>
           </thead>
           <tbody>
-{BuildFlatTeamTableRows(team.Rows, generatedAt)}          </tbody>
+{BuildTableBodyRows(table)}          </tbody>
         </table>
       </section>");
-        }
-
-        return html.ToString();
-    }
-
-    private string BuildFlatTeamTableRows(
-        IReadOnlyList<HierarchyReportRow> rows,
-        DateTimeOffset generatedAt)
-    {
-        ArgumentNullException.ThrowIfNull(rows);
-
-        if (rows.Count == 0)
-        {
-            return """            <tr><td class="empty" colspan="12">No team data.</td></tr>""";
-        }
-
-        var html = new StringBuilder(rows.Count * 320);
-        var referenceDate = DateOnly.FromDateTime(generatedAt.Date);
-
-        foreach (var row in rows)
-        {
-            _ = html.AppendLine(
-                CultureInfo.InvariantCulture,
-                $@"            <tr>
-              <td><strong>{Encode(row.DisplayName)}</strong> <span class=""muted"">(#{row.EmployeeId.ToString(CultureInfo.InvariantCulture)})</span></td>
-              <td>{Encode(row.Department ?? "-")}</td>
-              <td>{Encode(row.Team ?? "-")}</td>
-              <td>{Encode(row.JobTitle ?? "-")}</td>
-              <td>{Encode(row.Location ?? "-")}</td>
-              <td>{Encode(_formatter.FormatPhones(row.Phones))}</td>
-              <td>{Encode(_formatter.FormatVacationLeaveBalance(row.VacationLeaveBalance))}</td>
-              <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
-              <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
-              <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>
-              <td>{Encode(row.ManagerName ?? "-")}</td>
-              <td>{BuildAvailabilityMarkup(row.UnavailabilityEntries, referenceDate)}</td>
-            </tr>");
         }
 
         return html.ToString();
@@ -406,13 +322,10 @@ public sealed class HtmlContentComposer
         return Math.Max(8, (int)Math.Round(value * 100d / maxValue, MidpointRounding.AwayFromZero));
     }
 
-    private string BuildAvailabilityMarkup(
-        IReadOnlyList<TimeOffEntry> entries,
-        DateOnly referenceDate)
+    private static string BuildAvailabilityMarkup(
+        string text,
+        ReportAvailabilityState state)
     {
-        ArgumentNullException.ThrowIfNull(entries);
-
-        var state = _formatter.GetAvailabilityState(entries, referenceDate);
         var cssClass = state switch
         {
             ReportAvailabilityState.Available => "availability-available",
@@ -421,7 +334,7 @@ public sealed class HtmlContentComposer
             _ => throw new InvalidOperationException("Unknown availability state.")
         };
 
-        return $@"<span class=""availability {cssClass}"">{Encode(_formatter.FormatAvailability(entries, referenceDate))}</span>";
+        return $@"<span class=""availability {cssClass}"">{Encode(text)}</span>";
     }
 
     private static string BuildTeamSizeChartJson(IReadOnlyList<HierarchyTeam> teams)
@@ -533,4 +446,5 @@ public sealed class HtmlContentComposer
     };
 
     private readonly IReportPresentationFormatter _formatter;
+    private readonly ReportTableModelFactory _tableFactory;
 }

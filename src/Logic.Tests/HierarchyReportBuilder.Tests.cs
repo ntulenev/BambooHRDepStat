@@ -561,31 +561,4 @@ public sealed class HierarchyReportBuilderTests
             name,
             new DateOnly(startYear, startMonth, startDay),
             new DateOnly(endYear, endMonth, endDay));
-
-    private sealed class FixedTimeProvider(DateTimeOffset currentDate) : TimeProvider
-    {
-        public override DateTimeOffset GetUtcNow() => currentDate.ToUniversalTime();
-
-        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
-    }
-
-    private sealed class RecordingLoadingNotifier : ILoadingNotifier
-    {
-        public List<string> Statuses { get; } = [];
-
-        public Task<T> RunAsync<T>(
-            string description,
-            Func<CancellationToken, Task<T>> action,
-            CancellationToken ct)
-            => action(ct);
-
-        public void SetStatus(string description) => Statuses.Add(description);
-
-        public void SetProgress(string description, int completed, int total)
-        {
-            _ = description;
-            _ = completed;
-            _ = total;
-        }
-    }
 }
