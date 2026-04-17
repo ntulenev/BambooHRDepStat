@@ -40,6 +40,7 @@ public sealed class HierarchyFieldResolverTests
             CreateField("birthday", "Birthday"),
             CreateField("employmentStartDate", "Employment Start Date"),
             CreateField("division", "Division"),
+            CreateField("vacationLeaveAvailable", "Vacation Leave Available"),
             CreateField("mobilePhone", "Mobile Phone"),
             CreateField("workPhone", "Work Phone")
         };
@@ -85,6 +86,7 @@ public sealed class HierarchyFieldResolverTests
         selection.BirthDateField!.RequestKey.Should().Be("birthday");
         selection.HireDateField!.RequestKey.Should().Be("employmentStartDate");
         selection.TeamField!.RequestKey.Should().Be("division");
+        selection.VacationLeaveAvailableField!.RequestKey.Should().Be("vacationLeaveAvailable");
         selection.PhoneFields.Select(field => field.RequestKey)
             .Should()
             .Equal("mobilePhone", "workPhone");

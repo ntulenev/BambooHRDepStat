@@ -21,7 +21,8 @@ public sealed class HierarchyReportRow
         IReadOnlyList<TimeOffEntry> unavailabilityEntries,
         string? workEmail = null,
         string? team = null,
-        string? phoneNumbers = null)
+        string? phoneNumbers = null,
+        string? vacationLeaveAvailable = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(level);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -39,6 +40,7 @@ public sealed class HierarchyReportRow
         ManagerName = string.IsNullOrWhiteSpace(managerName) ? null : managerName;
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
         PhoneNumbers = string.IsNullOrWhiteSpace(phoneNumbers) ? null : phoneNumbers;
+        VacationLeaveAvailable = string.IsNullOrWhiteSpace(vacationLeaveAvailable) ? null : vacationLeaveAvailable;
         UnavailabilityEntries = unavailabilityEntries;
     }
 
@@ -101,6 +103,11 @@ public sealed class HierarchyReportRow
     /// Gets employee phone numbers formatted for report output.
     /// </summary>
     public string? PhoneNumbers { get; }
+
+    /// <summary>
+    /// Gets the available vacation leave balance for report output.
+    /// </summary>
+    public string? VacationLeaveAvailable { get; }
 
     /// <summary>
     /// Gets employee unavailability entries for the report week.

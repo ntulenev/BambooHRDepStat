@@ -37,6 +37,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         BambooHrField? birthDateField,
         BambooHrField? hireDateField,
         BambooHrField? teamField,
+        BambooHrField? vacationLeaveAvailableField,
         IReadOnlyList<BambooHrField> phoneFields,
         CancellationToken ct)
     {
@@ -58,6 +59,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         AddFieldRequestKey(requestKeys, birthDateField);
         AddFieldRequestKey(requestKeys, hireDateField);
         AddFieldRequestKey(requestKeys, teamField);
+        AddFieldRequestKey(requestKeys, vacationLeaveAvailableField);
         foreach (var phoneField in phoneFields)
         {
             AddFieldRequestKey(requestKeys, phoneField);
@@ -91,6 +93,12 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                     _ = TryGetFieldValue(fieldValues, birthDateField, out var birthDateValue);
                     _ = TryGetFieldValue(fieldValues, hireDateField, out var hireDateValue);
                     _ = TryGetFieldValue(fieldValues, teamField, out var team);
+                    _ = TryGetFieldValue(
+                        fieldValues,
+                        vacationLeaveAvailableField,
+                        out var vacationLeaveAvailable);
+                    var formattedVacationLeaveAvailable = FormatVacationLeaveAvailable(
+                        vacationLeaveAvailable);
                     var phoneNumbers = BuildPhoneNumbers(fieldValues, phoneFields);
                     _ = fieldValues.Values.TryGetValue(
                         relationshipField.RequestKey,
@@ -112,7 +120,8 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                         workEmail,
                         ManagerReference.Parse(managerLookupValue),
                         team,
-                        phoneNumbers));
+                        phoneNumbers,
+                        formattedVacationLeaveAvailable));
 
                     var completed = Interlocked.Increment(ref loadedProfiles);
                     _loadingNotifier.SetProgress(
@@ -191,6 +200,37 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         return builder.Length == 0
             ? null
             : builder.ToString();
+    }
+
+    private static string? FormatVacationLeaveAvailable(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        var separatorIndex = trimmed.IndexOf(' ', StringComparison.Ordinal);
+        var numericPart = separatorIndex >= 0
+            ? trimmed[..separatorIndex]
+            : trimmed;
+        var suffix = separatorIndex >= 0
+            ? trimmed[separatorIndex..]
+            : string.Empty;
+
+        var normalizedNumericPart = numericPart.Replace(",", ".", StringComparison.Ordinal);
+        if (!decimal.TryParse(
+                normalizedNumericPart,
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out var numericValue))
+        {
+            return trimmed;
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{decimal.Round(numericValue, 1, MidpointRounding.AwayFromZero):0.0}{suffix}");
     }
 
     /// <summary>

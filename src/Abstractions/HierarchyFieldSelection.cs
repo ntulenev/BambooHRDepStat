@@ -18,7 +18,8 @@ public sealed class HierarchyFieldSelection
         BambooHrField? birthDateField,
         BambooHrField? hireDateField,
         BambooHrField? teamField,
-        IReadOnlyList<BambooHrField>? phoneFields = null)
+        IReadOnlyList<BambooHrField>? phoneFields = null,
+        BambooHrField? vacationLeaveAvailableField = null)
     {
         ArgumentNullException.ThrowIfNull(relationshipField);
 
@@ -30,6 +31,7 @@ public sealed class HierarchyFieldSelection
         HireDateField = hireDateField;
         TeamField = teamField;
         PhoneFields = phoneFields ?? [];
+        VacationLeaveAvailableField = vacationLeaveAvailableField;
     }
 
     /// <summary>
@@ -71,4 +73,9 @@ public sealed class HierarchyFieldSelection
     /// Gets preferred phone fields when available.
     /// </summary>
     public IReadOnlyList<BambooHrField> PhoneFields { get; }
+
+    /// <summary>
+    /// Gets the preferred vacation leave available field when available.
+    /// </summary>
+    public BambooHrField? VacationLeaveAvailableField { get; }
 }

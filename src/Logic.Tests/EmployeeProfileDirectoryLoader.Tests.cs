@@ -57,6 +57,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             null,
             null,
             null,
+            null,
             [],
             CancellationToken.None);
 
@@ -75,6 +76,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         Func<Task> action = () => loader.LoadAsync(
             [],
             null!,
+            null,
             null,
             null,
             null,
@@ -106,6 +108,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 "dob",
                 "employmentStartDate",
                 "customTeam",
+                "vacationLeaveAvailable",
                 "mobilePhone",
                 "workPhone"
             };
@@ -163,6 +166,11 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             birthDateField: new BambooHrField("dob", "Date of Birth", null, "date"),
             hireDateField: new BambooHrField("employmentStartDate", "Employment Start Date", null, "date"),
             teamField: new BambooHrField("customTeam", "Team", null, "text"),
+            vacationLeaveAvailableField: new BambooHrField(
+                "vacationLeaveAvailable",
+                "Vacation Leave Available",
+                null,
+                "text"),
             phoneFields:
             [
                 new BambooHrField("mobilePhone", "Mobile Phone", null, "text"),
@@ -183,6 +191,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         profiles[0].HireDate.Should().Be(new DateOnly(2012, 2, 1));
         profiles[0].ManagerLookupValue.Should().Be("Alice Manager");
         profiles[0].PhoneNumbers.Should().Be("Mobile Phone: +49 111 1111");
+        profiles[0].VacationLeaveAvailable.Should().Be("18.5 days");
 
         profiles[1].DisplayName.Should().Be("Bob Jones");
         profiles[1].JobTitle.Should().Be("Manager");
@@ -191,6 +200,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         profiles[1].HireDate.Should().BeNull();
         profiles[1].ManagerLookupValue.Should().Be("Alice Manager");
         profiles[1].PhoneNumbers.Should().Be("Mobile Phone: +49 222 2222 | Work Phone: +49 333 3333");
+        profiles[1].VacationLeaveAvailable.Should().Be("11.0 days");
         requestedKeysByEmployeeId.Should().HaveCount(2);
         requestTokensByEmployeeId.Should().HaveCount(2);
         requestedKeysByEmployeeId[new EmployeeId(1)]
@@ -245,6 +255,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 ["dob"] = "1980-01-10",
                 ["employmentStartDate"] = "2012-02-01",
                 ["customTeam"] = "ADF Processing Team",
+                ["vacationLeaveAvailable"] = "18.54 days",
                 ["mobilePhone"] = "+49 111 1111"
             });
 
@@ -261,6 +272,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 ["officeCity"] = "Munich",
                 ["dob"] = "2026-03-12 08:30:00",
                 ["customTeam"] = "Platform Team",
+                ["vacationLeaveAvailable"] = "11 days",
                 ["mobilePhone"] = "+49 222 2222",
                 ["workPhone"] = "+49 333 3333"
             });

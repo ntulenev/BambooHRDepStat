@@ -33,6 +33,9 @@ public sealed class ConsoleReportWriterTests
         output.Should().Contain("Alice & Smith's Team");
         output.Should().Contain("Phone");
         output.Should().Contain("+49 222 2222");
+        output.Should().Contain("18.5");
+        output.Should().Contain("11.0");
+        output.Should().Contain("Vac");
     }
 
     [Fact(DisplayName = "The console writer renders empty-state sections and rejects an empty hierarchy.")]

@@ -26,7 +26,8 @@ public sealed class EmployeeProfile
         string? workEmail,
         ManagerReference manager,
         string? team = null,
-        string? phoneNumbers = null)
+        string? phoneNumbers = null,
+        string? vacationLeaveAvailable = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
@@ -49,6 +50,7 @@ public sealed class EmployeeProfile
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
         Manager = manager;
         PhoneNumbers = string.IsNullOrWhiteSpace(phoneNumbers) ? null : phoneNumbers;
+        VacationLeaveAvailable = string.IsNullOrWhiteSpace(vacationLeaveAvailable) ? null : vacationLeaveAvailable;
     }
 
     /// <summary>
@@ -130,6 +132,11 @@ public sealed class EmployeeProfile
     /// Gets employee phone numbers formatted for report output.
     /// </summary>
     public string? PhoneNumbers { get; }
+
+    /// <summary>
+    /// Gets the available vacation leave balance for report output.
+    /// </summary>
+    public string? VacationLeaveAvailable { get; }
 
     /// <summary>
     /// Gets raw manager lookup value for diagnostic and display scenarios.

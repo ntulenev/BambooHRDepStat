@@ -57,6 +57,9 @@ public sealed class HierarchyReportBuilderTests
             CreateField("mobilePhone", "Mobile Phone"),
             CreateField("workPhone", "Work Phone")
         };
+        var vacationLeaveAvailableField = CreateField(
+            "vacationLeaveAvailable",
+            "Vacation Leave Available");
         var fieldSelection = new HierarchyFieldSelection(
             relationshipField,
             locationField,
@@ -65,7 +68,8 @@ public sealed class HierarchyReportBuilderTests
             birthDateField,
             hireDateField,
             CreateField("team", "Team"),
-            phoneFields);
+            phoneFields,
+            vacationLeaveAvailableField);
         var employees = new[]
         {
             CreateEmployee(1, "Alice Smith", "Director"),
@@ -207,6 +211,7 @@ public sealed class HierarchyReportBuilderTests
                 It.Is<BambooHrField?>(value => value == birthDateField),
                 It.Is<BambooHrField?>(value => value == hireDateField),
                 It.Is<BambooHrField?>(value => value == fieldSelection.TeamField),
+                It.Is<BambooHrField?>(value => value == vacationLeaveAvailableField),
                 It.Is<IReadOnlyList<BambooHrField>>(value =>
                     value.Count == phoneFields.Length
                     && ReferenceEquals(value[0], phoneFields[0])
@@ -396,6 +401,7 @@ public sealed class HierarchyReportBuilderTests
         employeeProfileDirectoryLoader.Setup(loader => loader.LoadAsync(
                 It.Is<IReadOnlyList<BasicEmployee>>(value => ReferenceEquals(value, employees)),
                 It.Is<HierarchyRelationshipField>(value => ReferenceEquals(value, relationshipField)),
+                It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),

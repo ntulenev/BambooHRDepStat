@@ -466,6 +466,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("Department");
         _ = table.AddColumn("Team");
         _ = table.AddColumn("Job Title");
+        _ = table.AddColumn("Vacation Leave Available");
         _ = table.AddColumn("Location");
         _ = table.AddColumn("Phone");
         _ = table.AddColumn("Birth Date");
@@ -481,6 +482,7 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 Escape(row.Department ?? "-"),
                 Escape(row.Team ?? "-"),
                 Escape(row.JobTitle ?? "-"),
+                Escape(row.VacationLeaveAvailable ?? "-"),
                 Escape(row.Location ?? "-"),
                 Escape(row.PhoneNumbers ?? "-"),
                 Escape(FormatDate(row.DateOfBirth)),

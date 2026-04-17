@@ -249,6 +249,7 @@ public sealed class HtmlContentComposer
               <th>Department</th>
               <th>Team</th>
               <th>Job Title</th>
+              <th>Vacation Leave Available</th>
               <th>Location</th>
               <th>Phone</th>
               <th>Birth Date</th>
@@ -275,7 +276,7 @@ public sealed class HtmlContentComposer
 
         if (rows.Count == 0)
         {
-            return """            <tr><td class="empty" colspan="11">No team data.</td></tr>""";
+            return """            <tr><td class="empty" colspan="12">No team data.</td></tr>""";
         }
 
         var html = new StringBuilder(rows.Count * 320);
@@ -290,6 +291,7 @@ public sealed class HtmlContentComposer
               <td>{Encode(row.Department ?? "-")}</td>
               <td>{Encode(row.Team ?? "-")}</td>
               <td>{Encode(row.JobTitle ?? "-")}</td>
+              <td>{Encode(row.VacationLeaveAvailable ?? "-")}</td>
               <td>{Encode(row.Location ?? "-")}</td>
               <td>{Encode(row.PhoneNumbers ?? "-")}</td>
               <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>

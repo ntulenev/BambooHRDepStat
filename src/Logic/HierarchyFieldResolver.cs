@@ -35,7 +35,8 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
             FindField(fields, PreferredBirthDateFields),
             FindField(fields, PreferredHireDateFields),
             FindField(fields, PreferredTeamFields),
-            FindFields(fields, PreferredPhoneFields));
+            FindFields(fields, PreferredPhoneFields),
+            FindField(fields, PreferredVacationLeaveAvailableFields));
     }
 
     private async Task<HierarchyRelationshipField> ResolveRelationshipFieldAsync(
@@ -258,6 +259,14 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
         ("phone", "Phone"),
         ("workPhone", "Work Phone"),
         ("homePhone", "Home Phone")
+    ];
+
+    private static readonly (string RequestKey, string DisplayName)[] PreferredVacationLeaveAvailableFields =
+    [
+        ("vacationLeaveAvailable", "Vacation Leave Available"),
+        ("vacationAvailable", "Vacation Leave Available"),
+        ("vacationBalance", "Vacation Leave Available"),
+        ("timeOffBalance", "Vacation Leave Available")
     ];
 
     private static readonly HierarchyRelationshipField[] PreferredManagerIdFields =

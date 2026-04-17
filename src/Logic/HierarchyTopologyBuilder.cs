@@ -79,7 +79,8 @@ public sealed class HierarchyTopologyBuilder : IHierarchyTopologyBuilder
             ],
             profile.WorkEmail,
             profile.Team,
-            profile.PhoneNumbers));
+            profile.PhoneNumbers,
+            profile.VacationLeaveAvailable));
 
         if (!childrenByManager.TryGetValue(employeeId, out var children))
         {

@@ -19,6 +19,7 @@ public interface IEmployeeProfileDirectoryLoader
         BambooHrField? birthDateField,
         BambooHrField? hireDateField,
         BambooHrField? teamField,
+        BambooHrField? vacationLeaveAvailableField,
         IReadOnlyList<BambooHrField> phoneFields,
         CancellationToken ct);
 }
