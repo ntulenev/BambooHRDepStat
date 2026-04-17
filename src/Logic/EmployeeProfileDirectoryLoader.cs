@@ -42,6 +42,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
     {
         ArgumentNullException.ThrowIfNull(employees);
         ArgumentNullException.ThrowIfNull(relationshipField);
+        ArgumentNullException.ThrowIfNull(phoneFields);
 
         var requestKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {

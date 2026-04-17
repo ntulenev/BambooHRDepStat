@@ -156,7 +156,7 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
         return null;
     }
 
-    private static IReadOnlyList<BambooHrField> FindFields(
+    private static List<BambooHrField> FindFields(
         IEnumerable<BambooHrField> fields,
         (string RequestKey, string DisplayName)[] candidates)
     {
