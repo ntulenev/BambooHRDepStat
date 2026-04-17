@@ -33,6 +33,7 @@ For each employee in the selected hierarchy, the report includes:
 - display name
 - department
 - team
+- phone numbers
 - job title
 - location
 - birth date

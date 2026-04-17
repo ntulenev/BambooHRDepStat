@@ -57,6 +57,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             null,
             null,
             null,
+            [],
             CancellationToken.None);
 
         // Assert
@@ -80,6 +81,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             null,
             null,
             null,
+            [],
             CancellationToken.None);
 
         // Assert
@@ -103,7 +105,9 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 "officeCity",
                 "dob",
                 "employmentStartDate",
-                "customTeam"
+                "customTeam",
+                "mobilePhone",
+                "workPhone"
             };
         using var cts = new CancellationTokenSource();
         var employees = CreateEmployees();
@@ -159,6 +163,11 @@ public sealed class EmployeeProfileDirectoryLoaderTests
             birthDateField: new BambooHrField("dob", "Date of Birth", null, "date"),
             hireDateField: new BambooHrField("employmentStartDate", "Employment Start Date", null, "date"),
             teamField: new BambooHrField("customTeam", "Team", null, "text"),
+            phoneFields:
+            [
+                new BambooHrField("mobilePhone", "Mobile Phone", null, "text"),
+                new BambooHrField("workPhone", "Work Phone", null, "text")
+            ],
             cts.Token);
 
         // Assert
@@ -173,6 +182,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         profiles[0].DateOfBirth.Should().Be(new DateOnly(1980, 1, 10));
         profiles[0].HireDate.Should().Be(new DateOnly(2012, 2, 1));
         profiles[0].ManagerLookupValue.Should().Be("Alice Manager");
+        profiles[0].PhoneNumbers.Should().Be("Mobile Phone: +49 111 1111");
 
         profiles[1].DisplayName.Should().Be("Bob Jones");
         profiles[1].JobTitle.Should().Be("Manager");
@@ -180,6 +190,7 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         profiles[1].DateOfBirth.Should().Be(new DateOnly(2026, 3, 12));
         profiles[1].HireDate.Should().BeNull();
         profiles[1].ManagerLookupValue.Should().Be("Alice Manager");
+        profiles[1].PhoneNumbers.Should().Be("Mobile Phone: +49 222 2222 | Work Phone: +49 333 3333");
         requestedKeysByEmployeeId.Should().HaveCount(2);
         requestTokensByEmployeeId.Should().HaveCount(2);
         requestedKeysByEmployeeId[new EmployeeId(1)]
@@ -233,7 +244,8 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 ["officeCity"] = "Berlin",
                 ["dob"] = "1980-01-10",
                 ["employmentStartDate"] = "2012-02-01",
-                ["customTeam"] = "ADF Processing Team"
+                ["customTeam"] = "ADF Processing Team",
+                ["mobilePhone"] = "+49 111 1111"
             });
 
     private static EmployeeFieldValues CreateEmployeeTwoFieldValues()
@@ -248,7 +260,9 @@ public sealed class EmployeeProfileDirectoryLoaderTests
                 ["country"] = "Germany",
                 ["officeCity"] = "Munich",
                 ["dob"] = "2026-03-12 08:30:00",
-                ["customTeam"] = "Platform Team"
+                ["customTeam"] = "Platform Team",
+                ["mobilePhone"] = "+49 222 2222",
+                ["workPhone"] = "+49 333 3333"
             });
 
 }

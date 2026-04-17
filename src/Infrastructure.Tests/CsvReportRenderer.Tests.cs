@@ -72,9 +72,10 @@ public sealed class CsvReportRendererTests
 
             // Assert
             File.Exists(expectedOutputPath).Should().BeTrue();
-            File.ReadAllText(expectedOutputPath).Should().Contain("Employee Name,Email,Team");
-            File.ReadAllText(expectedOutputPath).Should().Contain("Alice & Smith,alice@example.com,Leadership Team");
-            File.ReadAllText(expectedOutputPath).Should().Contain("Bob Jones,bob@example.com,ADF Processing Team");
+            var csv = File.ReadAllText(expectedOutputPath);
+            csv.Should().Contain("Employee Name,Email,Phone Numbers,Team");
+            csv.Should().Contain("Alice & Smith,alice@example.com,Mobile Phone: +49 111 1111,Leadership Team");
+            csv.Should().Contain("Bob Jones,bob@example.com,Mobile Phone: +49 222 2222 | Work Phone: +49 333 3333,ADF Processing Team");
             reportFileLauncher.Verify(
                 launcher => launcher.Open(It.IsAny<string>()),
                 Times.Never);

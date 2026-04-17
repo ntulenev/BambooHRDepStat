@@ -34,7 +34,8 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
             FindField(fields, PreferredCityFields),
             FindField(fields, PreferredBirthDateFields),
             FindField(fields, PreferredHireDateFields),
-            FindField(fields, PreferredTeamFields));
+            FindField(fields, PreferredTeamFields),
+            FindFields(fields, PreferredPhoneFields));
     }
 
     private async Task<HierarchyRelationshipField> ResolveRelationshipFieldAsync(
@@ -155,6 +156,45 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
         return null;
     }
 
+    private static IReadOnlyList<BambooHrField> FindFields(
+        IEnumerable<BambooHrField> fields,
+        (string RequestKey, string DisplayName)[] candidates)
+    {
+        var fieldList = fields.ToArray();
+        List<BambooHrField> matches = [];
+        var addedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (requestKey, _) in candidates)
+        {
+            var exact = fieldList.FirstOrDefault(field =>
+                string.Equals(
+                    Normalize(field.RequestKey),
+                    Normalize(requestKey),
+                    StringComparison.Ordinal));
+            if (exact is not null && addedKeys.Add(exact.RequestKey))
+            {
+                matches.Add(exact);
+            }
+        }
+
+        foreach (var (requestKey, displayName) in candidates)
+        {
+            var partial = fieldList.FirstOrDefault(field =>
+                Normalize(field.RequestKey).Contains(
+                    Normalize(requestKey),
+                    StringComparison.Ordinal)
+                || Normalize(field.Name).Contains(
+                    Normalize(displayName),
+                    StringComparison.Ordinal));
+            if (partial is not null && addedKeys.Add(partial.RequestKey))
+            {
+                matches.Add(partial);
+            }
+        }
+
+        return matches;
+    }
+
     private static string Normalize(string value)
     {
         var buffer = value
@@ -209,6 +249,15 @@ public sealed class HierarchyFieldResolver : IHierarchyFieldResolver
         ("teamName", "Team"),
         ("workTeam", "Work Team"),
         ("employeeTeam", "Employee Team")
+    ];
+
+    private static readonly (string RequestKey, string DisplayName)[] PreferredPhoneFields =
+    [
+        ("mobilePhone", "Mobile Phone"),
+        ("phoneNumber", "Phone Number"),
+        ("phone", "Phone"),
+        ("workPhone", "Work Phone"),
+        ("homePhone", "Home Phone")
     ];
 
     private static readonly HierarchyRelationshipField[] PreferredManagerIdFields =

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text;
 
 using Abstractions;
 
@@ -36,6 +37,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         BambooHrField? birthDateField,
         BambooHrField? hireDateField,
         BambooHrField? teamField,
+        IReadOnlyList<BambooHrField> phoneFields,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(employees);
@@ -55,6 +57,10 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         AddFieldRequestKey(requestKeys, birthDateField);
         AddFieldRequestKey(requestKeys, hireDateField);
         AddFieldRequestKey(requestKeys, teamField);
+        foreach (var phoneField in phoneFields)
+        {
+            AddFieldRequestKey(requestKeys, phoneField);
+        }
 
         var profiles = new ConcurrentBag<EmployeeProfile>();
         var loadedProfiles = 0;
@@ -84,6 +90,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                     _ = TryGetFieldValue(fieldValues, birthDateField, out var birthDateValue);
                     _ = TryGetFieldValue(fieldValues, hireDateField, out var hireDateValue);
                     _ = TryGetFieldValue(fieldValues, teamField, out var team);
+                    var phoneNumbers = BuildPhoneNumbers(fieldValues, phoneFields);
                     _ = fieldValues.Values.TryGetValue(
                         relationshipField.RequestKey,
                         out var managerLookupValue);
@@ -103,7 +110,8 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                         ParseDate(hireDateValue),
                         workEmail,
                         ManagerReference.Parse(managerLookupValue),
-                        team));
+                        team,
+                        phoneNumbers));
 
                     var completed = Interlocked.Increment(ref loadedProfiles);
                     _loadingNotifier.SetProgress(
@@ -138,6 +146,50 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
         value = null;
         return field is not null
             && fieldValues.Values.TryGetValue(field.RequestKey, out value);
+    }
+
+    private static string? BuildPhoneNumbers(
+        EmployeeFieldValues fieldValues,
+        IReadOnlyList<BambooHrField> phoneFields)
+    {
+        ArgumentNullException.ThrowIfNull(fieldValues);
+        ArgumentNullException.ThrowIfNull(phoneFields);
+
+        if (phoneFields.Count == 0)
+        {
+            return null;
+        }
+
+        var builder = new StringBuilder();
+        var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var field in phoneFields)
+        {
+            if (!fieldValues.Values.TryGetValue(field.RequestKey, out var value)
+                || string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            var trimmedValue = value.Trim();
+            if (!values.Add(trimmedValue))
+            {
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                _ = builder.Append(" | ");
+            }
+
+            _ = builder.Append(field.Name.Trim());
+            _ = builder.Append(": ");
+            _ = builder.Append(trimmedValue);
+        }
+
+        return builder.Length == 0
+            ? null
+            : builder.ToString();
     }
 
     /// <summary>

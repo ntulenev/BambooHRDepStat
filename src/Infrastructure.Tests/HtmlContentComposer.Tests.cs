@@ -23,6 +23,8 @@ public sealed class HtmlContentComposerTests
         html.Should().Contain("Founders Day");
         html.Should().Contain("Bob Jones");
         html.Should().Contain("ADF Processing Team");
+        html.Should().Contain("Mobile Phone: +49 111 1111");
+        html.Should().Contain("Work Phone: +49 333 3333");
         html.Should().Contain("Flat Team Reports");
         html.Should().Contain("Alice &amp; Smith's Team");
         html.Should().Contain("Reports To (employee name)");

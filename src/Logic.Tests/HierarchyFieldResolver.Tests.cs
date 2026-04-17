@@ -39,7 +39,9 @@ public sealed class HierarchyFieldResolverTests
             CreateField("officeCity", "Office City"),
             CreateField("birthday", "Birthday"),
             CreateField("employmentStartDate", "Employment Start Date"),
-            CreateField("division", "Division")
+            CreateField("division", "Division"),
+            CreateField("mobilePhone", "Mobile Phone"),
+            CreateField("workPhone", "Work Phone")
         };
 
         bambooHrClient.Setup(client => client.GetFieldsAsync(
@@ -83,6 +85,9 @@ public sealed class HierarchyFieldResolverTests
         selection.BirthDateField!.RequestKey.Should().Be("birthday");
         selection.HireDateField!.RequestKey.Should().Be("employmentStartDate");
         selection.TeamField!.RequestKey.Should().Be("division");
+        selection.PhoneFields.Select(field => field.RequestKey)
+            .Should()
+            .Equal("mobilePhone", "workPhone");
         getFieldsCalls.Should().Be(1);
         getEmployeeFieldsCalls.Should().Be(1);
     }

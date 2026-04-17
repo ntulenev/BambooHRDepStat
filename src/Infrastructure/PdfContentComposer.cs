@@ -114,6 +114,7 @@ public sealed class PdfContentComposer
                     columns.RelativeColumn(1.2f);
                     columns.RelativeColumn(1.3f);
                     columns.RelativeColumn(1.4f);
+                    columns.RelativeColumn(1.5f);
                     columns.RelativeColumn(0.7f);
                     columns.RelativeColumn(0.8f);
                     columns.RelativeColumn(0.9f);
@@ -128,6 +129,7 @@ public sealed class PdfContentComposer
                     ComposeHeaderCell(header.Cell(), "Team");
                     ComposeHeaderCell(header.Cell(), "Job Title");
                     ComposeHeaderCell(header.Cell(), "Location");
+                    ComposeHeaderCell(header.Cell(), "Phone");
                     ComposeHeaderCell(header.Cell(), "Birth");
                     ComposeHeaderCell(header.Cell(), "Age");
                     ComposeHeaderCell(header.Cell(), "Start");
@@ -145,6 +147,7 @@ public sealed class PdfContentComposer
                     ComposeBodyCell(table.Cell(), row.Team ?? "-");
                     ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                     ComposeBodyCell(table.Cell(), row.Location ?? "-");
+                    ComposeBodyCell(table.Cell(), row.PhoneNumbers ?? "-");
                     ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
                     ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
                     ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));
@@ -374,6 +377,7 @@ public sealed class PdfContentComposer
                         columns.RelativeColumn(1f);
                         columns.RelativeColumn(1.3f);
                         columns.RelativeColumn(1.2f);
+                        columns.RelativeColumn(1.5f);
                         columns.RelativeColumn(0.9f);
                         columns.RelativeColumn(0.7f);
                         columns.RelativeColumn(0.9f);
@@ -388,6 +392,7 @@ public sealed class PdfContentComposer
                         ComposeHeaderCell(header.Cell(), "Team");
                         ComposeHeaderCell(header.Cell(), "Job Title");
                         ComposeHeaderCell(header.Cell(), "Location");
+                        ComposeHeaderCell(header.Cell(), "Phone");
                         ComposeHeaderCell(header.Cell(), "Birth");
                         ComposeHeaderCell(header.Cell(), "Age");
                         ComposeHeaderCell(header.Cell(), "Start");
@@ -404,6 +409,7 @@ public sealed class PdfContentComposer
                         ComposeBodyCell(table.Cell(), row.Team ?? "-");
                         ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                         ComposeBodyCell(table.Cell(), row.Location ?? "-");
+                        ComposeBodyCell(table.Cell(), row.PhoneNumbers ?? "-");
                         ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
                         ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
                         ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));
@@ -464,6 +470,7 @@ public sealed class PdfContentComposer
                 columns.RelativeColumn(1f);
                 columns.RelativeColumn(1.3f);
                 columns.RelativeColumn(1.2f);
+                columns.RelativeColumn(1.5f);
                 columns.RelativeColumn(0.9f);
                 columns.RelativeColumn(0.7f);
                 columns.RelativeColumn(0.9f);
@@ -478,6 +485,7 @@ public sealed class PdfContentComposer
                 ComposeHeaderCell(header.Cell(), "Team");
                 ComposeHeaderCell(header.Cell(), "Job Title");
                 ComposeHeaderCell(header.Cell(), "Location");
+                ComposeHeaderCell(header.Cell(), "Phone");
                 ComposeHeaderCell(header.Cell(), "Birth");
                 ComposeHeaderCell(header.Cell(), "Age");
                 ComposeHeaderCell(header.Cell(), "Start");
@@ -494,6 +502,7 @@ public sealed class PdfContentComposer
                 ComposeBodyCell(table.Cell(), row.Team ?? "-");
                 ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                 ComposeBodyCell(table.Cell(), row.Location ?? "-");
+                ComposeBodyCell(table.Cell(), row.PhoneNumbers ?? "-");
                 ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
                 ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
                 ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));

@@ -25,7 +25,8 @@ public sealed class EmployeeProfile
         DateOnly? hireDate,
         string? workEmail,
         ManagerReference manager,
-        string? team = null)
+        string? team = null,
+        string? phoneNumbers = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
@@ -47,6 +48,7 @@ public sealed class EmployeeProfile
         HireDate = hireDate;
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
         Manager = manager;
+        PhoneNumbers = string.IsNullOrWhiteSpace(phoneNumbers) ? null : phoneNumbers;
     }
 
     /// <summary>
@@ -123,6 +125,11 @@ public sealed class EmployeeProfile
     /// Gets manager relationship reference.
     /// </summary>
     public ManagerReference Manager { get; }
+
+    /// <summary>
+    /// Gets employee phone numbers formatted for report output.
+    /// </summary>
+    public string? PhoneNumbers { get; }
 
     /// <summary>
     /// Gets raw manager lookup value for diagnostic and display scenarios.

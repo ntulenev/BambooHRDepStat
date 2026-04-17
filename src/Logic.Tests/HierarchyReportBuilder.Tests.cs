@@ -52,6 +52,11 @@ public sealed class HierarchyReportBuilderTests
         var cityField = CreateField("city", "City");
         var birthDateField = CreateField("dateOfBirth", "Date of Birth");
         var hireDateField = CreateField("hireDate", "Hire Date");
+        var phoneFields = new[]
+        {
+            CreateField("mobilePhone", "Mobile Phone"),
+            CreateField("workPhone", "Work Phone")
+        };
         var fieldSelection = new HierarchyFieldSelection(
             relationshipField,
             locationField,
@@ -59,7 +64,8 @@ public sealed class HierarchyReportBuilderTests
             cityField,
             birthDateField,
             hireDateField,
-            CreateField("team", "Team"));
+            CreateField("team", "Team"),
+            phoneFields);
         var employees = new[]
         {
             CreateEmployee(1, "Alice Smith", "Director"),
@@ -201,6 +207,10 @@ public sealed class HierarchyReportBuilderTests
                 It.Is<BambooHrField?>(value => value == birthDateField),
                 It.Is<BambooHrField?>(value => value == hireDateField),
                 It.Is<BambooHrField?>(value => value == fieldSelection.TeamField),
+                It.Is<IReadOnlyList<BambooHrField>>(value =>
+                    value.Count == phoneFields.Length
+                    && ReferenceEquals(value[0], phoneFields[0])
+                    && ReferenceEquals(value[1], phoneFields[1])),
                 It.Is<CancellationToken>(token => token == cts.Token)))
             .Callback(() => loadProfilesCalls++)
             .ReturnsAsync(profiles);
@@ -392,6 +402,7 @@ public sealed class HierarchyReportBuilderTests
                 It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
                 It.Is<BambooHrField?>(value => value == null),
+                It.Is<IReadOnlyList<BambooHrField>>(value => value.Count == 0),
                 It.Is<CancellationToken>(token => token == cts.Token)))
             .Callback(() => loadProfilesCalls++)
             .ReturnsAsync(profiles);

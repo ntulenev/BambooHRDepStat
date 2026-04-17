@@ -78,7 +78,8 @@ public sealed class HierarchyTopologyBuilder : IHierarchyTopologyBuilder
                     .ThenBy(entry => entry.End)
             ],
             profile.WorkEmail,
-            profile.Team));
+            profile.Team,
+            profile.PhoneNumbers));
 
         if (!childrenByManager.TryGetValue(employeeId, out var children))
         {
