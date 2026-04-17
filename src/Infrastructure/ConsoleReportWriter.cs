@@ -126,9 +126,6 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
 
         var details = $"{row.EmployeeId} | {row.Department ?? "-"} | {row.Team ?? "-"} | {row.JobTitle ?? "-"}";
         var location = $"{Environment.NewLine}[grey]Location: {Escape(row.Location ?? "-")}[/]";
-        var phoneNumbers = row.PhoneNumbers is null
-            ? string.Empty
-            : $"{Environment.NewLine}[grey]Phone: {Escape(row.PhoneNumbers)}[/]";
         var birthDate =
             $"{Environment.NewLine}[grey]Birth date: {FormatDate(row.DateOfBirth)} | Age: {Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate))}[/]";
         var employmentStart = $"{Environment.NewLine}[grey]Employment start: {FormatDate(row.EmploymentStartDate)}[/]";
@@ -137,7 +134,6 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         return $"[green]{Escape(row.DisplayName)}[/] [grey](#{row.EmployeeId})[/]"
             + $"{Environment.NewLine}[grey]{Escape(details)}[/]"
             + location
-            + phoneNumbers
             + birthDate
             + employmentStart
             + $"{Environment.NewLine}{FormatUnavailability(row.UnavailabilityEntries, referenceDate)}"
@@ -429,7 +425,6 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("Team");
         _ = table.AddColumn("Job Title");
         _ = table.AddColumn("Location");
-        _ = table.AddColumn("Phone");
         _ = table.AddColumn("Birth Date");
         _ = table.AddColumn("Age");
         _ = table.AddColumn("Employment Start");
@@ -444,7 +439,6 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 Escape(row.Team ?? "-"),
                 Escape(row.JobTitle ?? "-"),
                 Escape(row.Location ?? "-"),
-                Escape(row.PhoneNumbers ?? "-"),
                 Escape(FormatDate(row.DateOfBirth)),
                 Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate)),
                 Escape(FormatDate(row.EmploymentStartDate)),
@@ -466,9 +460,9 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
         _ = table.AddColumn("Department");
         _ = table.AddColumn("Team");
         _ = table.AddColumn("Job Title");
-        _ = table.AddColumn("Vacation Leave Available");
         _ = table.AddColumn("Location");
         _ = table.AddColumn("Phone");
+        _ = table.AddColumn("Vacation Leave Available");
         _ = table.AddColumn("Birth Date");
         _ = table.AddColumn("Age");
         _ = table.AddColumn("Employment Start");
@@ -482,9 +476,9 @@ public sealed class ConsoleReportWriter : IConsoleReportRenderer
                 Escape(row.Department ?? "-"),
                 Escape(row.Team ?? "-"),
                 Escape(row.JobTitle ?? "-"),
-                Escape(row.VacationLeaveAvailable ?? "-"),
                 Escape(row.Location ?? "-"),
                 Escape(row.PhoneNumbers ?? "-"),
+                Escape(row.VacationLeaveAvailable ?? "-"),
                 Escape(FormatDate(row.DateOfBirth)),
                 Escape(_formatter.FormatAge(row.DateOfBirth, referenceDate)),
                 Escape(FormatDate(row.EmploymentStartDate)),

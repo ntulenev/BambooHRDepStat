@@ -31,6 +31,7 @@ public sealed class HtmlContentComposerTests
         html.Should().Contain("Flat Team Reports");
         html.Should().Contain("Alice &amp; Smith's Team");
         html.Should().Contain("Reports To (employee name)");
+        html.Split("<th>Phone</th>", StringSplitOptions.None).Should().HaveCount(2);
         html.Should().NotContain("__ROOT_EMPLOYEE__");
     }
 

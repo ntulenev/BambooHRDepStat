@@ -31,8 +31,8 @@ public sealed class ConsoleReportWriterTests
         output.Should().Contain("Team Grade Distribution");
         output.Should().Contain("Flat Team Reports");
         output.Should().Contain("Alice & Smith's Team");
-        output.Should().Contain("Phone");
-        output.Should().Contain("+49 222 2222");
+        output.Should().Contain("Location: Berlin, Germany");
+        output.Should().Contain("Birth date: 1985-05-10 | Age: 40");
         output.Should().Contain("18.5");
         output.Should().Contain("11.0");
         output.Should().Contain("Vac");
