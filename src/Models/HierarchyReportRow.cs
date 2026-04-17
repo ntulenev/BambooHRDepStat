@@ -21,8 +21,8 @@ public sealed class HierarchyReportRow
         IReadOnlyList<TimeOffEntry> unavailabilityEntries,
         string? workEmail = null,
         string? team = null,
-        string? phoneNumbers = null,
-        string? vacationLeaveAvailable = null)
+        IReadOnlyList<EmployeePhone>? phones = null,
+        VacationLeaveBalance? vacationLeaveBalance = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(level);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -39,9 +39,38 @@ public sealed class HierarchyReportRow
         EmploymentStartDate = employmentStartDate;
         ManagerName = string.IsNullOrWhiteSpace(managerName) ? null : managerName;
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
-        PhoneNumbers = string.IsNullOrWhiteSpace(phoneNumbers) ? null : phoneNumbers;
-        VacationLeaveAvailable = string.IsNullOrWhiteSpace(vacationLeaveAvailable) ? null : vacationLeaveAvailable;
+        Phones = phones ?? [];
+        VacationLeaveBalance = vacationLeaveBalance;
         UnavailabilityEntries = unavailabilityEntries;
+    }
+
+    /// <summary>
+    /// Creates a report row from an employee profile.
+    /// </summary>
+    public static HierarchyReportRow FromProfile(
+        int level,
+        EmployeeProfile profile,
+        string? managerName,
+        IReadOnlyList<TimeOffEntry> unavailabilityEntries)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(unavailabilityEntries);
+
+        return new HierarchyReportRow(
+            level,
+            profile.EmployeeId,
+            profile.DisplayName,
+            profile.Department,
+            profile.JobTitle,
+            profile.Location,
+            profile.DateOfBirth,
+            profile.HireDate,
+            managerName,
+            unavailabilityEntries,
+            profile.WorkEmail,
+            profile.Team,
+            profile.Phones,
+            profile.VacationLeaveBalance);
     }
 
     /// <summary>
@@ -100,14 +129,32 @@ public sealed class HierarchyReportRow
     public string? WorkEmail { get; }
 
     /// <summary>
-    /// Gets employee phone numbers formatted for report output.
+    /// Gets employee phone numbers.
     /// </summary>
-    public string? PhoneNumbers { get; }
+    public IReadOnlyList<EmployeePhone> Phones { get; }
 
     /// <summary>
-    /// Gets the available vacation leave balance for report output.
+    /// Gets employee phone numbers formatted for report output.
     /// </summary>
-    public string? VacationLeaveAvailable { get; }
+    public string? PhoneNumbers => Phones.Count == 0
+        ? null
+        : string.Join(
+            " | ",
+            Phones.Select(phone => $"{phone.Label}: {phone.Number}"));
+
+    /// <summary>
+    /// Gets the available vacation leave balance.
+    /// </summary>
+    public VacationLeaveBalance? VacationLeaveBalance { get; }
+
+    /// <summary>
+    /// Gets the available vacation leave balance formatted for report output.
+    /// </summary>
+    public string? VacationLeaveAvailable => VacationLeaveBalance.HasValue
+        ? string.Create(
+            CultureInfo.InvariantCulture,
+            $"{decimal.Round(VacationLeaveBalance.Value.Days, 1, MidpointRounding.AwayFromZero):0.0} days")
+        : null;
 
     /// <summary>
     /// Gets employee unavailability entries for the report week.

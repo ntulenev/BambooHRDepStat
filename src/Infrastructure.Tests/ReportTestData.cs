@@ -39,8 +39,8 @@ internal static class ReportTestData
                 [],
                 "alice@example.com",
                 "Leadership Team",
-                "Mobile Phone: +49 111 1111",
-                "18.5 days"),
+                [new EmployeePhone("Mobile Phone", "+49 111 1111")],
+                new VacationLeaveBalance(18.5m)),
             new HierarchyReportRow(
                 1,
                 childEmployeeId,
@@ -62,8 +62,11 @@ internal static class ReportTestData
                 ],
                 "bob@example.com",
                 "ADF Processing Team",
-                "Mobile Phone: +49 222 2222 | Work Phone: +49 333 3333",
-                "11.0 days")
+                [
+                    new EmployeePhone("Mobile Phone", "+49 222 2222"),
+                    new EmployeePhone("Work Phone", "+49 333 3333")
+                ],
+                new VacationLeaveBalance(11.0m))
         ];
         IReadOnlyList<HierarchyReportRow> recentHires = [rows[1]];
         IReadOnlyList<HierarchyTeam> teams =

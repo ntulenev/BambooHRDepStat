@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Text;
 
 using Abstractions;
 
@@ -97,9 +96,8 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                         fieldValues,
                         vacationLeaveAvailableField,
                         out var vacationLeaveAvailable);
-                    var formattedVacationLeaveAvailable = FormatVacationLeaveAvailable(
-                        vacationLeaveAvailable);
-                    var phoneNumbers = BuildPhoneNumbers(fieldValues, phoneFields);
+                    var vacationLeaveBalance = ParseVacationLeaveBalance(vacationLeaveAvailable);
+                    var phones = BuildPhones(fieldValues, phoneFields);
                     _ = fieldValues.Values.TryGetValue(
                         relationshipField.RequestKey,
                         out var managerLookupValue);
@@ -120,8 +118,8 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                         workEmail,
                         ManagerReference.Parse(managerLookupValue),
                         team,
-                        phoneNumbers,
-                        formattedVacationLeaveAvailable));
+                        phones,
+                        vacationLeaveBalance));
 
                     var completed = Interlocked.Increment(ref loadedProfiles);
                     _loadingNotifier.SetProgress(
@@ -158,7 +156,7 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
             && fieldValues.Values.TryGetValue(field.RequestKey, out value);
     }
 
-    private static string? BuildPhoneNumbers(
+    private static List<EmployeePhone> BuildPhones(
         EmployeeFieldValues fieldValues,
         IReadOnlyList<BambooHrField> phoneFields)
     {
@@ -167,10 +165,10 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
 
         if (phoneFields.Count == 0)
         {
-            return null;
+            return [];
         }
 
-        var builder = new StringBuilder();
+        List<EmployeePhone> phones = [];
         var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var field in phoneFields)
@@ -187,50 +185,17 @@ public sealed class EmployeeProfileDirectoryLoader : IEmployeeProfileDirectoryLo
                 continue;
             }
 
-            if (builder.Length > 0)
-            {
-                _ = builder.Append(" | ");
-            }
-
-            _ = builder.Append(field.Name.Trim());
-            _ = builder.Append(": ");
-            _ = builder.Append(trimmedValue);
+            phones.Add(new EmployeePhone(field.Name.Trim(), trimmedValue));
         }
 
-        return builder.Length == 0
-            ? null
-            : builder.ToString();
+        return phones;
     }
 
-    private static string? FormatVacationLeaveAvailable(string? value)
+    private static VacationLeaveBalance? ParseVacationLeaveBalance(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return null;
-        }
-
-        var trimmed = value.Trim();
-        var separatorIndex = trimmed.IndexOf(' ', StringComparison.Ordinal);
-        var numericPart = separatorIndex >= 0
-            ? trimmed[..separatorIndex]
-            : trimmed;
-        var suffix = separatorIndex >= 0
-            ? trimmed[separatorIndex..]
-            : string.Empty;
-
-        var normalizedNumericPart = numericPart.Replace(",", ".", StringComparison.Ordinal);
-        if (!decimal.TryParse(
-                normalizedNumericPart,
-                NumberStyles.Number,
-                CultureInfo.InvariantCulture,
-                out var numericValue))
-        {
-            return trimmed;
-        }
-
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{decimal.Round(numericValue, 1, MidpointRounding.AwayFromZero):0.0}{suffix}");
+        return VacationLeaveBalance.TryParse(value, out var balance)
+            ? balance
+            : null;
     }
 
     /// <summary>

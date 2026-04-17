@@ -62,25 +62,15 @@ public sealed class HierarchyTopologyBuilder : IHierarchyTopologyBuilder
             entries.AddRange(personalEntries);
         }
 
-        rows.Add(new HierarchyReportRow(
+        rows.Add(HierarchyReportRow.FromProfile(
             level,
-            profile.EmployeeId,
-            profile.DisplayName,
-            profile.Department,
-            profile.JobTitle,
-            profile.Location,
-            profile.DateOfBirth,
-            profile.HireDate,
+            profile,
             profile.ResolveManagerDisplayName(profilesByEmployeeId),
             [
                 .. entries
                     .OrderBy(entry => entry.Start)
                     .ThenBy(entry => entry.End)
-            ],
-            profile.WorkEmail,
-            profile.Team,
-            profile.PhoneNumbers,
-            profile.VacationLeaveAvailable));
+            ]));
 
         if (!childrenByManager.TryGetValue(employeeId, out var children))
         {

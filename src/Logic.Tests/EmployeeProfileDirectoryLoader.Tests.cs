@@ -190,8 +190,9 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         profiles[0].DateOfBirth.Should().Be(new DateOnly(1980, 1, 10));
         profiles[0].HireDate.Should().Be(new DateOnly(2012, 2, 1));
         profiles[0].ManagerLookupValue.Should().Be("Alice Manager");
-        profiles[0].PhoneNumbers.Should().Be("Mobile Phone: +49 111 1111");
-        profiles[0].VacationLeaveAvailable.Should().Be("18.5 days");
+        profiles[0].Phones.Should().Equal(
+            [new EmployeePhone("Mobile Phone", "+49 111 1111")]);
+        profiles[0].VacationLeaveBalance.Should().Be(new VacationLeaveBalance(18.54m));
 
         profiles[1].DisplayName.Should().Be("Bob Jones");
         profiles[1].JobTitle.Should().Be("Manager");
@@ -199,8 +200,12 @@ public sealed class EmployeeProfileDirectoryLoaderTests
         profiles[1].DateOfBirth.Should().Be(new DateOnly(2026, 3, 12));
         profiles[1].HireDate.Should().BeNull();
         profiles[1].ManagerLookupValue.Should().Be("Alice Manager");
-        profiles[1].PhoneNumbers.Should().Be("Mobile Phone: +49 222 2222 | Work Phone: +49 333 3333");
-        profiles[1].VacationLeaveAvailable.Should().Be("11.0 days");
+        profiles[1].Phones.Should().Equal(
+            [
+                new EmployeePhone("Mobile Phone", "+49 222 2222"),
+                new EmployeePhone("Work Phone", "+49 333 3333")
+            ]);
+        profiles[1].VacationLeaveBalance.Should().Be(new VacationLeaveBalance(11m));
         requestedKeysByEmployeeId.Should().HaveCount(2);
         requestTokensByEmployeeId.Should().HaveCount(2);
         requestedKeysByEmployeeId[new EmployeeId(1)]

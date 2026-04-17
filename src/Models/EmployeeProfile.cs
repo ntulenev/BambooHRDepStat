@@ -26,8 +26,8 @@ public sealed class EmployeeProfile
         string? workEmail,
         ManagerReference manager,
         string? team = null,
-        string? phoneNumbers = null,
-        string? vacationLeaveAvailable = null)
+        IReadOnlyList<EmployeePhone>? phones = null,
+        VacationLeaveBalance? vacationLeaveBalance = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
         ArgumentException.ThrowIfNullOrWhiteSpace(firstName);
@@ -49,8 +49,8 @@ public sealed class EmployeeProfile
         HireDate = hireDate;
         WorkEmail = string.IsNullOrWhiteSpace(workEmail) ? null : workEmail;
         Manager = manager;
-        PhoneNumbers = string.IsNullOrWhiteSpace(phoneNumbers) ? null : phoneNumbers;
-        VacationLeaveAvailable = string.IsNullOrWhiteSpace(vacationLeaveAvailable) ? null : vacationLeaveAvailable;
+        Phones = phones ?? [];
+        VacationLeaveBalance = vacationLeaveBalance;
     }
 
     /// <summary>
@@ -129,14 +129,32 @@ public sealed class EmployeeProfile
     public ManagerReference Manager { get; }
 
     /// <summary>
-    /// Gets employee phone numbers formatted for report output.
+    /// Gets employee phone numbers.
     /// </summary>
-    public string? PhoneNumbers { get; }
+    public IReadOnlyList<EmployeePhone> Phones { get; }
 
     /// <summary>
-    /// Gets the available vacation leave balance for report output.
+    /// Gets employee phone numbers formatted for report output.
     /// </summary>
-    public string? VacationLeaveAvailable { get; }
+    public string? PhoneNumbers => Phones.Count == 0
+        ? null
+        : string.Join(
+            " | ",
+            Phones.Select(phone => $"{phone.Label}: {phone.Number}"));
+
+    /// <summary>
+    /// Gets the available vacation leave balance.
+    /// </summary>
+    public VacationLeaveBalance? VacationLeaveBalance { get; }
+
+    /// <summary>
+    /// Gets the available vacation leave balance formatted for report output.
+    /// </summary>
+    public string? VacationLeaveAvailable => VacationLeaveBalance.HasValue
+        ? string.Create(
+            CultureInfo.InvariantCulture,
+            $"{decimal.Round(VacationLeaveBalance.Value.Days, 1, MidpointRounding.AwayFromZero):0.0} days")
+        : null;
 
     /// <summary>
     /// Gets raw manager lookup value for diagnostic and display scenarios.
