@@ -290,8 +290,8 @@ public sealed class HtmlContentComposer
               <td>{Encode(row.Team ?? "-")}</td>
               <td>{Encode(row.JobTitle ?? "-")}</td>
               <td>{Encode(row.Location ?? "-")}</td>
-              <td>{Encode(row.PhoneNumbers ?? "-")}</td>
-              <td>{Encode(row.VacationLeaveAvailable ?? "-")}</td>
+              <td>{Encode(_formatter.FormatPhones(row.Phones))}</td>
+              <td>{Encode(_formatter.FormatVacationLeaveBalance(row.VacationLeaveBalance))}</td>
               <td>{Encode(_formatter.FormatDate(row.DateOfBirth))}</td>
               <td>{Encode(_formatter.FormatAge(row.DateOfBirth, referenceDate))}</td>
               <td>{Encode(_formatter.FormatDate(row.EmploymentStartDate))}</td>

@@ -134,27 +134,9 @@ public sealed class EmployeeProfile
     public IReadOnlyList<EmployeePhone> Phones { get; }
 
     /// <summary>
-    /// Gets employee phone numbers formatted for report output.
-    /// </summary>
-    public string? PhoneNumbers => Phones.Count == 0
-        ? null
-        : string.Join(
-            " | ",
-            Phones.Select(phone => $"{phone.Label}: {phone.Number}"));
-
-    /// <summary>
     /// Gets the available vacation leave balance.
     /// </summary>
     public VacationLeaveBalance? VacationLeaveBalance { get; }
-
-    /// <summary>
-    /// Gets the available vacation leave balance formatted for report output.
-    /// </summary>
-    public string? VacationLeaveAvailable => VacationLeaveBalance.HasValue
-        ? string.Create(
-            CultureInfo.InvariantCulture,
-            $"{decimal.Round(VacationLeaveBalance.Value.Days, 1, MidpointRounding.AwayFromZero):0.0} days")
-        : null;
 
     /// <summary>
     /// Gets raw manager lookup value for diagnostic and display scenarios.

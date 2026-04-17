@@ -13,6 +13,29 @@ namespace Infrastructure;
 public sealed class ReportPresentationFormatter : IReportPresentationFormatter
 {
     /// <inheritdoc />
+    public string FormatPhones(IReadOnlyList<EmployeePhone> phones)
+    {
+        ArgumentNullException.ThrowIfNull(phones);
+
+        return phones.Count == 0
+            ? "-"
+            : string.Join(
+                " | ",
+                phones.Select(phone =>
+                    $"{phone.Label}: {phone.Number}"));
+    }
+
+    /// <inheritdoc />
+    public string FormatVacationLeaveBalance(VacationLeaveBalance? balance)
+    {
+        return balance.HasValue
+            ? string.Create(
+                CultureInfo.InvariantCulture,
+                $"{decimal.Round(balance.Value.Days, 1, MidpointRounding.AwayFromZero):0.0} days")
+            : "-";
+    }
+
+    /// <inheritdoc />
     public string FormatDate(DateOnly? dateValue)
     {
         return dateValue?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "-";

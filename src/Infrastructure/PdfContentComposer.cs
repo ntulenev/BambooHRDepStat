@@ -498,8 +498,8 @@ public sealed class PdfContentComposer
                 ComposeBodyCell(table.Cell(), row.Team ?? "-");
                 ComposeBodyCell(table.Cell(), row.JobTitle ?? "-");
                 ComposeBodyCell(table.Cell(), row.Location ?? "-");
-                ComposeBodyCell(table.Cell(), row.PhoneNumbers ?? "-");
-                ComposeBodyCell(table.Cell(), row.VacationLeaveAvailable ?? "-");
+                ComposeBodyCell(table.Cell(), _formatter.FormatPhones(row.Phones));
+                ComposeBodyCell(table.Cell(), _formatter.FormatVacationLeaveBalance(row.VacationLeaveBalance));
                 ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.DateOfBirth));
                 ComposeBodyCell(table.Cell(), _formatter.FormatAge(row.DateOfBirth, referenceDate));
                 ComposeBodyCell(table.Cell(), _formatter.FormatDate(row.EmploymentStartDate));

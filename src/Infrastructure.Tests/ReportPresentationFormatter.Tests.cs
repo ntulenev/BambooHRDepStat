@@ -22,6 +22,32 @@ public sealed class ReportPresentationFormatterTests
         text.Should().Be("Available");
     }
 
+    [Fact(DisplayName = "The formatter joins employee phones for display.")]
+    [Trait("Category", "Unit")]
+    public void FormatPhonesShouldJoinPhonesForDisplay()
+    {
+        var formatter = new ReportPresentationFormatter();
+
+        var text = formatter.FormatPhones(
+            [
+                new EmployeePhone("Mobile Phone", "+49 111 1111"),
+                new EmployeePhone("Work Phone", "+49 222 2222")
+            ]);
+
+        text.Should().Be("Mobile Phone: +49 111 1111 | Work Phone: +49 222 2222");
+    }
+
+    [Fact(DisplayName = "The formatter rounds vacation leave balances to tenths.")]
+    [Trait("Category", "Unit")]
+    public void FormatVacationLeaveBalanceShouldRoundToTenths()
+    {
+        var formatter = new ReportPresentationFormatter();
+
+        var text = formatter.FormatVacationLeaveBalance(new VacationLeaveBalance(18.54m));
+
+        text.Should().Be("18.5 days");
+    }
+
     [Fact(DisplayName = "The formatter marks the availability state as available when no entries exist.")]
     [Trait("Category", "Unit")]
     public void GetAvailabilityStateShouldReturnAvailableWhenThereAreNoEntries()

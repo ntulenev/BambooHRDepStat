@@ -31,8 +31,19 @@ public sealed class CsvReportFileStore
         foreach (var row in rows)
         {
             writer.WriteLine(
-                $"{Escape(row.DisplayName)},{Escape(row.WorkEmail ?? string.Empty)},{Escape(row.PhoneNumbers ?? string.Empty)},{Escape(row.Team ?? string.Empty)}");
+                $"{Escape(row.DisplayName)},{Escape(row.WorkEmail ?? string.Empty)},{Escape(FormatPhones(row.Phones))},{Escape(row.Team ?? string.Empty)}");
         }
+    }
+
+    private static string FormatPhones(IReadOnlyList<EmployeePhone> phones)
+    {
+        ArgumentNullException.ThrowIfNull(phones);
+
+        return phones.Count == 0
+            ? string.Empty
+            : string.Join(
+                " | ",
+                phones.Select(phone => $"{phone.Label}: {phone.Number}"));
     }
 
     private static string Escape(string value)

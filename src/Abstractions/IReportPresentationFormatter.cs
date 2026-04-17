@@ -8,6 +8,16 @@ namespace Abstractions;
 public interface IReportPresentationFormatter
 {
     /// <summary>
+    /// Formats employee phones for display.
+    /// </summary>
+    string FormatPhones(IReadOnlyList<EmployeePhone> phones);
+
+    /// <summary>
+    /// Formats a vacation leave balance for display.
+    /// </summary>
+    string FormatVacationLeaveBalance(VacationLeaveBalance? balance);
+
+    /// <summary>
     /// Formats a date for display.
     /// </summary>
     string FormatDate(DateOnly? dateValue);
